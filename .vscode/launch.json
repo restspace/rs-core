@@ -1,0 +1,37 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Deno: Test",
+            "request": "launch",
+            "type": "pwa-node",
+            "runtimeExecutable": "deno",
+            "runtimeArgs": [
+                "test",
+                "--unstable",
+                "--inspect-brk",
+                "--allow-all",
+                "--import-map=importMap.json",
+                "test/"
+            ],
+            "attachSimplePort": 9229,
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Deno: Test this file",
+            "request": "launch",
+            "type": "pwa-node",
+            "runtimeExecutable": "deno",
+            "runtimeArgs": [
+                "test",
+                "--unstable",
+                "--inspect-brk",
+                "--allow-all",
+                "--import-map=C:\\Dev\\rs-runtime\\importMap.json",
+                "${file}"
+            ],
+            "attachSimplePort": 9229,
+            "console": "integratedTerminal"
+        }
+    ]
+}
