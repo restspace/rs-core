@@ -7,6 +7,7 @@ import Ajv, { Schema } from "https://cdn.skypack.dev/ajv?dts";
 import { getErrors } from "./utility/errors.ts";
 import { ServiceContext, SimpleServiceContext } from "./ServiceContext.ts";
 import { PathInfo } from "./DirDescriptor.ts";
+import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
 
 export type ServiceFunction<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> =
     (msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => Promise<Message>;
@@ -18,6 +19,7 @@ export enum AuthorizationType {
 const ajv = new Ajv({ allErrors: true, strictSchema: false, allowUnionTypes: true });
 
 export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> {
+    /** Returns a Service which returns every message unchanged */
     static Identity = (new Service()).setMethodPath("all", "/", msg => Promise.resolve(msg));
     
     methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {};
@@ -32,6 +34,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     }
 
 
+    /** Get a service function by the base url, preferring the longest matching url */
     funcByUrl(method: string, url: Url) : [ string[], ServiceFunction<TAdapter, TConfig> ] | undefined {
         const pathMap = this.methodFuncs[method];
         if (!pathMap) return undefined;
@@ -41,6 +44,9 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         return [ matchPathElements, pathMap[matchPath] ];
     }
 
+    /** Service component definitions set up handlers at different base paths. This returns PathInfos for directory
+     * listing which describe the paths we know exist because of registered handlers in a directory at the specified path
+     */
     pathsAt(path: string) : PathInfo[] {
         if (!path.startsWith('/')) path = '/' + path;
         if (!path.endsWith('/')) path += '/';
@@ -53,13 +59,29 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         return Array.from(paths.values()).map(p => [ p ] as PathInfo);
     }
 
+    /** Add custom updates to the ServiceContext */
+    enhanceContext(context: ServiceContext<TAdapter>, config: TConfig): ServiceContext<TAdapter> {
+        const proxyAdapterSource = context.manifest.proxyAdapterSource;
+        if (proxyAdapterSource) {
+            context.makeProxyRequest = async (msg: Message) => {
+                const proxyAdapter = await context.getAdapter<IProxyAdapter>(proxyAdapterSource, config.proxyAdapterConfig || {});
+                const proxyMsg = await proxyAdapter.buildMessage(msg);
+                return await context.makeRequest(proxyMsg);
+            };
+        }
+        return context;
+    }
 
+    /** This ServiceFunction handles any message with a url at or under this Service's configured base path by looking up the appropriate
+     * registered ServiceFunction and forwarding to it
+     */
     func: ServiceFunction<TAdapter, TConfig> = (msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => {
         const method = msg.method.toLowerCase();
         const callMethodFunc = ([ matchPathElements, methodFunc ]: [ string[], ServiceFunction<TAdapter, TConfig> ],
             msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => {
             msg.url.basePathElements = msg.url.basePathElements.concat(matchPathElements);
-            return methodFunc(msg, context, config);
+            const enhancedContext = this.enhanceContext(context, config);
+            return methodFunc(msg, enhancedContext, config);
         }
 
         if (method === 'options') return Promise.resolve(msg);
@@ -102,6 +124,9 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         );
     }
 
+    /** Override this to customise which configured role list applies for a given incoming message (generally by
+     * looking at the HTTP method)
+     */
     authType: (msg: Message) => Promise<AuthorizationType> = (msg: Message) => { // returns promise as overrides may need to be async
         switch (msg.method) {
             case "OPTIONS": return Promise.resolve(AuthorizationType.none);
@@ -140,44 +165,69 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         this.initFunc = initFunc;
     }
 
+    /** Handle all GET method messages at or under the configured base path using the supplied ServiceFunction */
     get = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('get', '/', func);
 
+    /** Handle GET method messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     getPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('get', path, func);
 
+    /** Handle all GET method messages to a directory (i.e. url ends with '/') at or under the configured base path using the supplied ServiceFunction */
     getDirectory = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('getDirectory', '/', func);
 
+    /** Handle GET method messages to a directory (i.e. url ends with '/') at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     getDirectoryPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('getDirectory', path, func);
     
+
+    /** Handle all POST method messages at or under the configured base path using the supplied ServiceFunction */
     post = (func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('post', '/', func, schema);
 
+    /** Handle POST method messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     postPath = (path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('post', path, func, schema);
     
+    /** Handle all POST method messages to a directory (i.e. url ends with '/') at or under the configured base path using the supplied ServiceFunction */
     postDirectory = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('postDirectory', '/', func);
 
+    /** Handle POST method messages to a directory (i.e. url ends with '/') at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     postDirectoryPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('postDirectory', path, func);
 
+
+    /** Handle all PUT method messages at or under the configured base path using the supplied ServiceFunction */
     put = (func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('put', '/', func, schema);
 
+    /** Handle PUT method messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     putPath = (path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('put', path, func, schema);
 
+    /** Handle all PUT method messages to a directory (i.e. url ends with '/') at or under the configured base path using the supplied ServiceFunction */
     putDirectory = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('putDirectory', '/', func);
 
+    /** Handle PUT method messages to a directory (i.e. url ends with '/') at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     putDirectoryPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('putDirectory', path, func);
 
+
+    /** Handle all DELETE method messages at or under the configured base path using the supplied ServiceFunction */
     delete = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('delete', '/', func);
 
+    /** Handle DELETE method messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     deletePath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('delete', path, func);
 
+    /** Handle all DELETE method messages to a directory (i.e. url ends with '/') at or under the configured base path using the supplied ServiceFunction */
     deleteDirectory = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('deleteDirectory', '/', func);
 
+    /** Handle DELETE method messages to a directory (i.e. url ends with '/') at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     deleteDirectoryPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('deleteDirectory', path, func);
 
+
+    /** Handle all PATCH method messages at or under the configured base path using the supplied ServiceFunction */
     patch = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('patch', '/', func);
 
+    /** Handle PATCH method messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     patchPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('patch', path, func);
 
+
+    /** Handle all messages at or under the configured base path using the supplied ServiceFunction */
     all = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('all', '/', func);
 
+    /** Handle all messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     allPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('all', path, func);
 }
 

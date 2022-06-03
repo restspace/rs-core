@@ -9,41 +9,82 @@ import { transformation } from "./transformation/transformation.ts";
 import { Url } from "./Url.ts";
 import { pathCombine } from "./utility/utility.ts";
 
-type TransformUrl = string | ((msg: Message) => string | [ Url, MessageMethod ]);
+export type MapUrl = string | ((msg: Message) => string | [ Url, MessageMethod ]);
+export type Transform<TConfig> = any | ((msg: Message, config: TConfig, json: any) => any);
 
 // Tools for automating adding standard API patterns to a Service which wraps an underlying API
 
-const applyTransformUrl = (transformUrl: TransformUrl, msg: Message): [ string, MessageMethod ] | Message => {
-	if (typeof transformUrl === 'string') {
-		return [ resolvePathPatternWithUrl(transformUrl, msg.url) as string, msg.method ];
+const applyMapUrl = (mapUrl: MapUrl, msg: Message, createTest?: (msg: Message) => boolean, createMapUrl?: MapUrl): [ string, MessageMethod ] | Message => {
+	if (createTest && createMapUrl) {
+		if (createTest(msg)) mapUrl = createMapUrl;
+	}
+	if (typeof mapUrl === 'string') {
+		return [ resolvePathPatternWithUrl(mapUrl, msg.url) as string, msg.method ];
 	} else {
-		const transformedUrl = transformUrl(msg);
-		if (typeof transformedUrl === 'string') return msg.setStatus(400, transformedUrl);
-		const [ url, method ] = transformedUrl;
+		const mappedUrl = mapUrl(msg);
+		if (typeof mappedUrl === 'string') return msg.setStatus(400, mappedUrl);
+		const [ url, method ] = mappedUrl;
 		return [ url.toString(), method ];
 	}
 };
+
+const applyTransform = async <TConfig extends IServiceConfig = IServiceConfig>(transform: Transform<TConfig>, resp: Message, config: TConfig) => {
+	if (!resp.ok || !resp.data) return resp;
+	const json = await resp.data.asJson();
+	if (transform) {
+		if (typeof transform == "function") {
+			return transform(json, resp, config);
+		} else {
+			return transformation(transform, { json, config, resp }, resp.url);
+		}
+	} else {
+		return await resp.data.asJson();
+	}
+}
+
+export interface BuildStoreParams<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> {
+	basePath: string;
+	service: Service<TAdapter, TConfig>;
+	schema: Record<string, unknown>;
+	mapUrlRead?: MapUrl;
+	mapUrlWrite?: MapUrl;
+	mapUrlDelete?: MapUrl;
+	createTest?: (msg: Message) => boolean;
+	mapUrlCreate?: MapUrl;
+	mapUrlDirectoryDelete?: MapUrl;
+	transformDirectory?: Transform<TConfig>;
+	transformRead?: Transform<TConfig>;
+	transformWrite?: Transform<TConfig>;
+}
 
 /**
  * Build a store pattern on a given base path of a service
  * @param {string} basePath - The base path of the store relative to the base path of the service
  * @param {Service<TAdapter, TConfig>} service - The service to which to add the store pattern
- * @param {directory map} directoryMap - How to map a directory request onto the underlying API
- * @param {string} proxyAdapterSource - Location of a proxy adapter to preprocess requests to the underlying API
  * @param {Record<string, unknown>} schema - The schema of data stored
- * @param {TransformUrl} transformUrlRead - Transform the called url into the underlying API url for read
- * @param {TransformUrl} transformUrlWrite - Transform the called url into the underlying API url for write
- * @param {TransformUrl} transformUrlDelete - Transform the called url into the underlying API url for deletion
+ * @param {MapUrl} mapUrlRead - Map the called url into the underlying API url for read
+ * @param {MapUrl} mapUrlWrite - Map the called url into the underlying API url for write
+ * @param {MapUrl} mapUrlDelete - Map the called url into the underlying API url for deletion
+ * @param {[ (msg: Message) => boolean, MapUrl ]} mapUrlCreate - Map the caleld url into the underlying API url for creation
+ * @param {MapUrl} mapUrlDirectoryDelete - Map the called url into the underlying API url for directory deletion
+ * @param {Transform<TConfig>} transformDirectory - Transform the directory list from the underlying API
+ * @param {Transform<TConfig>} transformRead - Transform the read data from the underlying API
+ * @param {Transform<TConfig>} transformWrite - Transform the incoming data for writing as appropriate for the underlying API
  * */
-export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig>(
-	basePath: string,
-	service: Service<TAdapter, TConfig>,
-	directoryMap: { pathPattern: string, transform: any },
-	proxyAdapterSource: string,
-	schema: Record<string, unknown>,
-	transformUrlRead: TransformUrl,
-	transformUrlWrite: TransformUrl,
-	transformUrlDelete: TransformUrl
+export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig>({
+	basePath,
+	service,
+	schema,
+	mapUrlRead,
+	mapUrlWrite,
+	mapUrlDelete,
+	createTest,
+	mapUrlCreate,
+	mapUrlDirectoryDelete,
+	transformDirectory,
+	transformRead,
+	transformWrite
+}: BuildStoreParams<TAdapter, TConfig>
 ) => {
 	const schemaInstanceMime = (baseUrl: string) => {
 		const schemaUrl = pathCombine(baseUrl, ".schema.json");
@@ -54,48 +95,76 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 		Promise.resolve(msg.setDataJson(schema, "application/schema+json")));
 
 	service.getDirectoryPath(basePath, async (msg, context, config) => {
-		const reqPath = resolvePathPatternWithUrl(directoryMap.pathPattern, msg.url) as string;
-		let reqMsg = new Message(reqPath, context.tenant, "GET");
-		const proxyAdapter = await context.getAdapter<IProxyAdapter>(proxyAdapterSource, config);
-		reqMsg = await proxyAdapter.buildMessage(reqMsg);
-		const dirResp = await context.makeRequest(reqMsg);
-		if (!dirResp.ok || !dirResp.data) return dirResp;
-		const dirJson = await dirResp.data.asJson();
-		const outDirJson = transformation(directoryMap.transform, dirJson, msg.url) as DirDescriptor;
-		outDirJson.path = msg.url.servicePath;
-		outDirJson.paths.push(...service.pathsAt(basePath));
-		outDirJson.spec = {
+		const transformedUrl = applyMapUrl(mapUrlDirectoryDelete!, msg);
+		if (transformedUrl instanceof Message) return transformedUrl;
+		const [ url, method ] = transformedUrl;
+		const reqMsg = new Message(url, context.tenant, method);
+		const dirResp = await context.makeProxyRequest!(reqMsg);
+
+		const dirJson = await applyTransform(transformDirectory, dirResp, config) as DirDescriptor | Message;
+		if (dirJson instanceof Message) return dirJson;
+
+		dirJson.path = msg.url.servicePath;
+		// add in subdirectory paths already registered on the service
+		dirJson.paths.push(...service.pathsAt(basePath));
+		dirJson.spec = {
 			pattern: "store",
 			storeMimeTypes: [ schemaInstanceMime(msg.url.baseUrl()) ],
 			createDirectory: false,
 			createFiles: true
 		};
-		return msg;
+		return msg.setDataJson(dirJson);
 	});
 
-	const mapPath: (transformUrl: TransformUrl) => ServiceFunction<TAdapter, TConfig> = 
-	(transformUrl: TransformUrl) => async (msg, context, config) => {
-		const transformedUrl = applyTransformUrl(transformUrl, msg);
-		if (transformedUrl instanceof Message) return transformedUrl;
-		const [ url, method ] = transformedUrl;
-		let reqMsg = new Message(url, context.tenant, method);
-		const proxyAdapter = await context.getAdapter<IProxyAdapter>(proxyAdapterSource, config);
-		reqMsg = await proxyAdapter.buildMessage(reqMsg);
-		const resp = await context.makeRequest(reqMsg);
+	const mapPath: (mapUrl: MapUrl,
+		transformRead: any,
+		transformWrite: any,
+		createTest?: (msg: Message) => boolean,
+		mapUrlCreate?: MapUrl) => ServiceFunction<TAdapter, TConfig> = 
+	(mapUrl: MapUrl,
+		transformRead: any,
+		transformWrite: any,
+		createTest?: (msg: Message) => boolean,
+		mapUrlCreate?: MapUrl) => async (msg, context, config) =>
+	{
+		const mappedUrl = applyMapUrl(mapUrl, msg, createTest, mapUrlCreate);
+		if (mappedUrl instanceof Message) return mappedUrl;
+		const [ url, method ] = mappedUrl;
+		const reqMsg = new Message(url, context.tenant, method);
+		if (msg.method === "PUT" || msg.method === "POST") {
+			if (!msg.data) return msg.setStatus(400, "No body in write operation");
+			if (transformWrite) {
+				let writeJson = await msg.data.asJson();
+				writeJson = transformation(transformWrite, writeJson, msg.url);
+				reqMsg.setDataJson(writeJson, "application/json");
+			} else {
+				reqMsg.setData(msg.data!.data, msg.data!.mimeType);
+			}
+		}
+		const resp = await context.makeProxyRequest!(reqMsg);
 		if (!resp.ok) {
 			await resp.data?.ensureDataIsArrayBuffer();
 			return resp;
 		}
 		if (msg.method === "GET") {
-			const schemaUrl = pathCombine(msg.url.baseUrl(), basePath, ".schema.json");
-			resp.data!.mimeType = `application/json; schema="${schemaUrl}"`;
+			if (!msg.data) return msg.setStatus(400, "No body in GET response");
+			if (transformRead) {
+				const json = await applyTransform(transformRead, msg, config);
+				if (json instanceof Message) return json;
+				reqMsg.setDataJson(json, "application/json");
+			} else {
+				const schemaUrl = pathCombine(msg.url.baseUrl(), basePath, ".schema.json");
+				const mimeType = `application/json; schema="${schemaUrl}"`;
+				reqMsg.setData(resp.data!.data, mimeType);
+			}
 		} else {
 			resp.data = undefined;
 		}
 		return resp;
 	};
 
-	service.getPath(basePath, mapPath(transformUrlRead));
-	service.putPath(basePath, mapPath(transformUrlWrite));
-	service.deletePath(basePath, mapPath(transformUrlDelete));
+	if (mapUrlRead) service.getPath(basePath, mapPath(mapUrlRead, transformRead, undefined));
+	if (mapUrlWrite) service.putPath(basePath, mapPath(mapUrlWrite, undefined, transformWrite, createTest, mapUrlCreate));
+	if (mapUrlDelete) service.deletePath(basePath, mapPath(mapUrlDelete, undefined, undefined));
+	if (mapUrlDirectoryDelete) service.deleteDirectoryPath(basePath, mapPath(mapUrlDirectoryDelete, undefined, undefined));
 }

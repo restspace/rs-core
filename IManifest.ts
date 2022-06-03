@@ -19,6 +19,7 @@ export interface IServiceManifest extends IManifest {
     postPipeline?: PipelineSpec;
     exposedConfigProperties?: string[];
     isFilter?: boolean; // whether service passes unhandled message unchanged rather than returning 404
+    proxyAdapterSource?: string;
 }
 
 export interface IAdapterManifest extends IManifest {

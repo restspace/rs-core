@@ -14,6 +14,7 @@ export interface IServiceConfig {
     adapterSource?: string;
     infraName?: string;
     adapterConfig?: Record<string, unknown>;
+    proxyAdapterConfig?: Record<string, unknown>;
     manifestConfig?: IConfigFromManifest;
 }
 

@@ -1,7 +1,8 @@
 import { evaluate } from 'https://cdn.skypack.dev/bcx-expression-evaluator?dts';
-import dayjs from "https://cdn.skypack.dev/dayjs?dts";
+import dayjs from "https://cdn.skypack.dev/dayjs@1.10.4";
 import { Url } from "rs-core/Url.ts";
 import { resolvePathPatternWithUrl } from "rs-core/PathPattern.ts";
+import { pathCombine } from "../utility/utility.ts";
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
@@ -61,6 +62,7 @@ export const transformation = (transformObject: any, data: any, url: Url): any =
                 return dir === 'desc' ? -res : res;
             }),
         expressionSort_expArgs: [1],
+        pathCombine,
         // expressionGroup: (list: ArrayLike<any>, expression: string) => !list ? [] : groupBy(Array.from(list),
         //     (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
         // expressionGroup_expArgs: [1],
@@ -83,7 +85,10 @@ export const transformation = (transformObject: any, data: any, url: Url): any =
         return evaluate(transformObject, data, transformHelper);
     } else if (Array.isArray(transformObject)) {
         if (transformObject.length === 0
-            || typeof transformObject[0] !== 'string') return transformObject;
+            || typeof transformObject[0] !== 'string'
+            || !transformObject[0].endsWith("(")) {
+                return transformObject.map(item => transformation(item, data, url));
+        }
         const expr = arrayToFunction(transformObject, transformHelper);
         const arrResult = evaluate(expr, data, transformHelper);
         return arrResult;
