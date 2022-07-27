@@ -15,6 +15,7 @@ export interface SimpleServiceContext {
     manifest: IServiceManifest;
     getAdapter: <T extends IAdapter>(url: string, config: unknown) => Promise<T>;
     makeProxyRequest?: (msg: Message) => Promise<Message>;
+    state: <T>(cons: new() => T) => T;
 }
 
 export interface ServiceContext<TAdapter extends IAdapter> extends SimpleServiceContext {

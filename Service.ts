@@ -8,6 +8,7 @@ import { getErrors } from "./utility/errors.ts";
 import { ServiceContext, SimpleServiceContext } from "./ServiceContext.ts";
 import { PathInfo } from "./DirDescriptor.ts";
 import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
+import { after } from "./utility/utility.ts";
 
 export type ServiceFunction<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> =
     (msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => Promise<Message>;
@@ -24,15 +25,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     
     methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {};
     schemas: { [ method: string ]: PathMap<Schema> } = {};
-    initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => void = () => {};
-    private _state: Record<string, any> = {};
-    state = <T>(cons: new () => T, context: SimpleServiceContext, config: TConfig) => {
-        const key = `${context.tenant}:${config.basePath}`;
-        if (this._state[key] === undefined) this._state[key] = new cons();
-        if (!(this._state[key] instanceof cons)) throw new Error('Changed type of state attached to service');
-        return this._state[key] as T;
-    }
-
+    initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => Promise<void> = () => Promise.resolve();
 
     /** Get a service function by the base url, preferring the longest matching url */
     funcByUrl(method: string, url: Url) : [ string[], ServiceFunction<TAdapter, TConfig> ] | undefined {
@@ -51,12 +44,25 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         if (!path.startsWith('/')) path = '/' + path;
         if (!path.endsWith('/')) path += '/';
         const paths: Set<string> = new Set<string>();
-        Object.entries(this.methodFuncs)
-            .forEach(([method, pm]) =>
-                Object.keys(pm).filter(p => p.startsWith(path))
-                    .forEach(p => paths.add(p + (method.includes('Directory') ? '/' : '')))
+        const isMatch = (p: string) => {
+            const rest = after(p, path);
+            return rest && !rest.includes('/');
+        }
+        // scan all PathMaps for ones which exist in the directory at path parameter, create unique Set
+        Object.values(this.methodFuncs)
+            .forEach(pm =>
+                Object.keys(pm)
+                    .filter(p => isMatch(p))
+                    .forEach(p => paths.add(p))
             );
-        return Array.from(paths.values()).map(p => [ p ] as PathInfo);
+        // convert to an array, adding a directory indicator (trailing /) if there's a getDirectory handler
+        // registered for the path
+        return Array.from(paths.values()).map(p => {
+            const name = after(p, path);
+            return Object.keys(this.methodFuncs["getDirectory"]).some(k => k === p)
+            ? [ `${name}/` ]
+            : [ name ] as PathInfo;
+        });
     }
 
     /** Add custom updates to the ServiceContext */
@@ -161,7 +167,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         return this;
     }
 
-    initializer(initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => void) {
+    initializer(initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => Promise<void>) {
         this.initFunc = initFunc;
     }
 

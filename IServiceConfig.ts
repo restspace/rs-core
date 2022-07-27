@@ -18,6 +18,10 @@ export interface IServiceConfig {
     manifestConfig?: IConfigFromManifest;
 }
 
+export interface ITriggerServiceConfig extends IServiceConfig {
+    triggerUrl: string;
+}
+
 export type IChordServiceConfig = PartialBy<IServiceConfig, "access">;
 
 export interface IAccessControl {

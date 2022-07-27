@@ -19,6 +19,7 @@ export interface IServiceManifest extends IManifest {
     postPipeline?: PipelineSpec;
     exposedConfigProperties?: string[];
     isFilter?: boolean; // whether service passes unhandled message unchanged rather than returning 404
+    isTrigger?: boolean; // whether service has a triggerUrl config property and can initiate a request to this url
     proxyAdapterSource?: string;
 }
 

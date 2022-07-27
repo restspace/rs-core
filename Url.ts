@@ -45,6 +45,11 @@ export class Url {
         }
     }
 
+    get resourcePath(): string {
+        const resPathEls = this._isDirectory ? this.pathElements : this.pathElements.slice(0, -1);
+        return '/' + resPathEls.join('/');
+    }
+
     get resourceParts(): string[] {
         return this.resourceName.split('.');
     }

@@ -7,9 +7,9 @@ import { resolvePathPatternWithUrl } from "./PathPattern.ts";
 import { Service, ServiceFunction } from "./Service.ts";
 import { transformation } from "./transformation/transformation.ts";
 import { Url } from "./Url.ts";
-import { pathCombine } from "./utility/utility.ts";
+import { pathCombine, upToLast } from "./utility/utility.ts";
 
-export type MapUrl = string | ((msg: Message) => string | [ Url, MessageMethod ]);
+export type MapUrl = string | ((msg: Message) => string | [ string, MessageMethod ]);
 export type Transform<TConfig> = any | ((msg: Message, config: TConfig, json: any) => any);
 
 // Tools for automating adding standard API patterns to a Service which wraps an underlying API
@@ -24,7 +24,7 @@ const applyMapUrl = (mapUrl: MapUrl, msg: Message, createTest?: (msg: Message) =
 		const mappedUrl = mapUrl(msg);
 		if (typeof mappedUrl === 'string') return msg.setStatus(400, mappedUrl);
 		const [ url, method ] = mappedUrl;
-		return [ url.toString(), method ];
+		return [ resolvePathPatternWithUrl(url, msg.url) as string, method ];
 	}
 };
 
@@ -42,6 +42,37 @@ const applyTransform = async <TConfig extends IServiceConfig = IServiceConfig>(t
 	}
 }
 
+export interface BuildDefaultDirectoryParams<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> {
+	basePath: string;
+	service: Service<TAdapter, TConfig>;
+}
+
+/**
+ * Build a default directory handler that lists only other registered subdirectories
+ * @param {string} basePath - The base path of the handler relative to the base path of the service
+ * @param {Service<TAdapter, TConfig>} service - The service to which to add the handler
+ * */
+ export const buildDefaultDirectory = <TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig>({
+	basePath,
+	service
+ }: BuildDefaultDirectoryParams<TAdapter, TConfig>
+ ) => {
+	service.getDirectoryPath(basePath, (msg) => {
+		const dirJson = {
+			path: msg.url.servicePath,
+			// add in subdirectory paths already registered on the service
+			paths: service.pathsAt(basePath),
+			spec: {
+				pattern: "view",
+				respMimeType: "text/plain"
+			}
+		} as DirDescriptor;
+		msg.setDataJson(dirJson);
+		msg.data!.setIsDirectory();
+		return Promise.resolve(msg);
+	});
+ }
+
 export interface BuildStoreParams<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> {
 	basePath: string;
 	service: Service<TAdapter, TConfig>;
@@ -51,6 +82,7 @@ export interface BuildStoreParams<TAdapter extends IAdapter = IAdapter, TConfig 
 	mapUrlDelete?: MapUrl;
 	createTest?: (msg: Message) => boolean;
 	mapUrlCreate?: MapUrl;
+	mapUrlDirectoryRead?: MapUrl;
 	mapUrlDirectoryDelete?: MapUrl;
 	transformDirectory?: Transform<TConfig>;
 	transformRead?: Transform<TConfig>;
@@ -65,7 +97,8 @@ export interface BuildStoreParams<TAdapter extends IAdapter = IAdapter, TConfig 
  * @param {MapUrl} mapUrlRead - Map the called url into the underlying API url for read
  * @param {MapUrl} mapUrlWrite - Map the called url into the underlying API url for write
  * @param {MapUrl} mapUrlDelete - Map the called url into the underlying API url for deletion
- * @param {[ (msg: Message) => boolean, MapUrl ]} mapUrlCreate - Map the caleld url into the underlying API url for creation
+ * @param {[ (msg: Message) => boolean, MapUrl ]} mapUrlCreate - Map the called url into the underlying API url for creation
+ * @param {MapUrl} mapUrlDirectoryRead - Map the called url into the underlying API url for reading a directory
  * @param {MapUrl} mapUrlDirectoryDelete - Map the called url into the underlying API url for directory deletion
  * @param {Transform<TConfig>} transformDirectory - Transform the directory list from the underlying API
  * @param {Transform<TConfig>} transformRead - Transform the read data from the underlying API
@@ -80,22 +113,21 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 	mapUrlDelete,
 	createTest,
 	mapUrlCreate,
+	mapUrlDirectoryRead,
 	mapUrlDirectoryDelete,
 	transformDirectory,
 	transformRead,
 	transformWrite
 }: BuildStoreParams<TAdapter, TConfig>
 ) => {
-	const schemaInstanceMime = (baseUrl: string) => {
-		const schemaUrl = pathCombine(baseUrl, ".schema.json");
+	const schemaInstanceMime = (url: Url) => {
+		const schemaUrl = pathCombine(url.baseUrl(), upToLast(url.servicePath, '/'), ".schema.json");
 		return `application/json; schema="${schemaUrl}"`;
 	};
 
-	service.getPath(basePath + "/.schema.json", msg =>
-		Promise.resolve(msg.setDataJson(schema, "application/schema+json")));
-
 	service.getDirectoryPath(basePath, async (msg, context, config) => {
-		const transformedUrl = applyMapUrl(mapUrlDirectoryDelete!, msg);
+		if (!mapUrlDirectoryRead) return msg.setStatus(500, 'No mapping for directory read configured when building store');
+		const transformedUrl = applyMapUrl(mapUrlDirectoryRead, msg);
 		if (transformedUrl instanceof Message) return transformedUrl;
 		const [ url, method ] = transformedUrl;
 		const reqMsg = new Message(url, context.tenant, method);
@@ -105,15 +137,21 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 		if (dirJson instanceof Message) return dirJson;
 
 		dirJson.path = msg.url.servicePath;
+		const dirPath = pathCombine(basePath, msg.url.servicePath);
 		// add in subdirectory paths already registered on the service
-		dirJson.paths.push(...service.pathsAt(basePath));
+		dirJson.paths.push(...service.pathsAt(dirPath));
 		dirJson.spec = {
 			pattern: "store",
-			storeMimeTypes: [ schemaInstanceMime(msg.url.baseUrl()) ],
+			storeMimeTypes: [ schemaInstanceMime(msg.url) ],
 			createDirectory: false,
-			createFiles: true
+			createFiles: true,
+			exceptionMimeTypes: {
+				"/.schema.json": [ "application/schema+json", "" ]
+			}
 		};
-		return msg.setDataJson(dirJson);
+		msg.setDataJson(dirJson);
+		msg.data!.setIsDirectory();
+		return msg;
 	});
 
 	const mapPath: (mapUrl: MapUrl,
@@ -127,6 +165,11 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 		createTest?: (msg: Message) => boolean,
 		mapUrlCreate?: MapUrl) => async (msg, context, config) =>
 	{
+		// return schema from req for .schema.json on any resource path
+		if (msg.url.resourceName === ".schema.json" && msg.method === "GET") {
+			return msg.setDataJson(schema, "application/schema+json");
+		}
+
 		const mappedUrl = applyMapUrl(mapUrl, msg, createTest, mapUrlCreate);
 		if (mappedUrl instanceof Message) return mappedUrl;
 		const [ url, method ] = mappedUrl;
@@ -147,15 +190,14 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 			return resp;
 		}
 		if (msg.method === "GET") {
-			if (!msg.data) return msg.setStatus(400, "No body in GET response");
+			if (!resp.data) return resp.setStatus(400, "No body in GET response");
 			if (transformRead) {
-				const json = await applyTransform(transformRead, msg, config);
+				const json = await applyTransform(transformRead, resp, config);
 				if (json instanceof Message) return json;
-				reqMsg.setDataJson(json, "application/json");
+				resp.setDataJson(json, "application/json");
 			} else {
-				const schemaUrl = pathCombine(msg.url.baseUrl(), basePath, ".schema.json");
-				const mimeType = `application/json; schema="${schemaUrl}"`;
-				reqMsg.setData(resp.data!.data, mimeType);
+				const mimeType = schemaInstanceMime(msg.url);
+				resp.data.setMimeType(mimeType);
 			}
 		} else {
 			resp.data = undefined;

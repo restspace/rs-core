@@ -373,9 +373,12 @@ export class Message {
 
     private cancelOldStream() {
         if (this.data?.data instanceof ReadableStream) {
+            const self = this;
             (async (rs: ReadableStream) => {
                 try {
-                    await rs.cancel('message body change'); // fire&forget promise
+                    if (rs !== self.data?.data) { // check rs is now not the data of this message
+                        await rs.cancel('message body change'); // fire&forget promise
+                    }
                 } catch {}
             })(this.data.data);
         }
