@@ -294,6 +294,7 @@ export class Message {
             headers: this.mapHeaders(this.headers, new Headers()),
             body: this.data?.data || undefined,
         });
+        
         return req;
     }
 
@@ -317,6 +318,7 @@ export class Message {
 
     removeHeader(header: string) {
         delete this._headers[header.toLowerCase()];
+        return this;
     }
 
     async getParam(name: string, urlPosition = -1): Promise<any> {
@@ -395,6 +397,7 @@ export class Message {
         }
         this._status = 0;
         this.conditionalMode = false;
+        this.setHeader("content-type", mimeType);
         return this;
     }
 
