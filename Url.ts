@@ -16,7 +16,7 @@ export class Url {
         return (this.isRelative ? '' : '/') + this.pathElements.join('/') + (this.isDirectory && this.pathElements.length > 0 ? '/' : '');
     }
     set path(val: string) {
-        this.pathElements = slashTrim(val).split('/').filter(el => !!el);
+        this.pathElements = decodeURI(slashTrim(val)).split('/').filter(el => !!el);
         this._isDirectory = val.endsWith('/') || val === '';
     }
     pathElements: string[] = [];
@@ -139,8 +139,8 @@ export class Url {
         this.isRelative = (!this.domain && urlParse[1] !== '/');
         this.path = urlParse[4];
         this._isDirectory = this.path.endsWith('/');
-        this.queryString = urlParse[5];
-        this.queryString = this.queryString ? this.queryString.substr(1) : '';
+        const qs = urlParse[5];
+        this.queryString = qs ? decodeURI(qs.substr(1)) : '';
         this.fragment = urlParse[6];
         this.fragment = this.fragment ? this.fragment.substr(1) : '';
     }
