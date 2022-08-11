@@ -1,30 +1,30 @@
 import { IAdapter } from "./adapter/IAdapter.ts";
 import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
-import { DirDescriptor } from "./DirDescriptor.ts";
+import { DirDescriptor, PathInfo } from "./DirDescriptor.ts";
 import { IServiceConfig } from "./IServiceConfig.ts";
 import { Message, MessageMethod } from "./Message.ts";
 import { resolvePathPatternWithUrl } from "./PathPattern.ts";
 import { Service, ServiceFunction } from "./Service.ts";
 import { transformation } from "./transformation/transformation.ts";
 import { Url } from "./Url.ts";
-import { pathCombine, upToLast } from "./utility/utility.ts";
+import { pathCombine, slashTrim, upToLast } from "./utility/utility.ts";
 
 export type MapUrl = string | ((msg: Message) => string | [ string, MessageMethod ]);
 export type Transform<TConfig> = any | ((msg: Message, config: TConfig, json: any) => any);
 
 // Tools for automating adding standard API patterns to a Service which wraps an underlying API
 
-const applyMapUrl = (mapUrl: MapUrl, msg: Message, createTest?: (msg: Message) => boolean, createMapUrl?: MapUrl): [ string, MessageMethod ] | Message => {
+const applyMapUrl = (mapUrl: MapUrl, msg: Message, config: IServiceConfig, createTest?: (msg: Message) => boolean, createMapUrl?: MapUrl): [ string, MessageMethod ] | Message => {
 	if (createTest && createMapUrl) {
 		if (createTest(msg)) mapUrl = createMapUrl;
 	}
 	if (typeof mapUrl === 'string') {
-		return [ resolvePathPatternWithUrl(mapUrl, msg.url) as string, msg.method ];
+		return [ resolvePathPatternWithUrl(mapUrl, msg.url, config) as string, msg.method ];
 	} else {
 		const mappedUrl = mapUrl(msg);
 		if (typeof mappedUrl === 'string') return msg.setStatus(400, mappedUrl);
 		const [ url, method ] = mappedUrl;
-		return [ resolvePathPatternWithUrl(url, msg.url) as string, method ];
+		return [ resolvePathPatternWithUrl(url, msg.url, config) as string, method ];
 	}
 };
 
@@ -41,6 +41,11 @@ const applyTransform = async <TConfig extends IServiceConfig = IServiceConfig>(t
 		return await resp.data.asJson();
 	}
 }
+
+const schemaInstanceMime = (url: Url) => {
+	const schemaUrl = pathCombine(url.baseUrl(), upToLast(url.servicePath, '/'), ".schema.json");
+	return `application/json; schema="${schemaUrl}"`;
+};
 
 export interface BuildDefaultDirectoryParams<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> {
 	basePath: string;
@@ -120,14 +125,9 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 	transformWrite
 }: BuildStoreParams<TAdapter, TConfig>
 ) => {
-	const schemaInstanceMime = (url: Url) => {
-		const schemaUrl = pathCombine(url.baseUrl(), upToLast(url.servicePath, '/'), ".schema.json");
-		return `application/json; schema="${schemaUrl}"`;
-	};
-
 	service.getDirectoryPath(basePath, async (msg, context, config) => {
 		if (!mapUrlDirectoryRead) return msg.setStatus(500, 'No mapping for directory read configured when building store');
-		const transformedUrl = applyMapUrl(mapUrlDirectoryRead, msg);
+		const transformedUrl = applyMapUrl(mapUrlDirectoryRead, msg, config);
 		if (transformedUrl instanceof Message) return transformedUrl;
 		const [ url, method ] = transformedUrl;
 		const reqMsg = new Message(url, context.tenant, method);
@@ -170,7 +170,7 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 			return msg.setDataJson(schema, "application/schema+json");
 		}
 
-		const mappedUrl = applyMapUrl(mapUrl, msg, createTest, mapUrlCreate);
+		const mappedUrl = applyMapUrl(mapUrl, msg, config, createTest, mapUrlCreate);
 		if (mappedUrl instanceof Message) return mappedUrl;
 		const [ url, method ] = mappedUrl;
 		const reqMsg = new Message(url, context.tenant, method);
@@ -209,4 +209,82 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 	if (mapUrlWrite) service.putPath(basePath, mapPath(mapUrlWrite, undefined, transformWrite, createTest, mapUrlCreate));
 	if (mapUrlDelete) service.deletePath(basePath, mapPath(mapUrlDelete, undefined, undefined));
 	if (mapUrlDirectoryDelete) service.deleteDirectoryPath(basePath, mapPath(mapUrlDirectoryDelete, undefined, undefined));
+}
+
+export interface BuildStateMapParams<TData, TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> {
+	basePath: string;
+	service: Service<TAdapter, TConfig>;
+	stateData: Record<string, TData>;
+	readOnly?: boolean;
+	schema: any;
+}
+
+export const buildStateMap = <TData, TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig>({
+	basePath,
+	service,
+	stateData,
+	readOnly,
+	schema
+}: BuildStateMapParams<TData, TAdapter, TConfig>) => {
+	service.getDirectoryPath(basePath, (msg) => {
+		let dirJson: DirDescriptor;
+		const ensureLeadingSlash = (s: string) => s.startsWith('/') ? s : '/' + s;
+
+		const paths = Object.keys(stateData).map(key => [ ensureLeadingSlash(key) ] as PathInfo);
+		if (readOnly === false) {
+			dirJson = {
+				path: msg.url.servicePath,
+				paths,
+				spec: {
+					pattern: "store",
+					storeMimeTypes: [ schemaInstanceMime(msg.url) ],
+					createDirectory: false,
+					createFiles: true,
+					exceptionMimeTypes: {
+						".json.schema": [ "application/schema+json", "" ]
+					}
+				}
+			};
+		} else {
+			dirJson = {
+				path: msg.url.servicePath,
+				paths,
+				spec: {
+					pattern: "view",
+					respMimeType: schemaInstanceMime(msg.url)
+				}
+			};
+		}
+		msg.setDataJson(dirJson);
+		msg.data!.setIsDirectory();
+		return Promise.resolve(msg);
+	});
+
+	service.getPath(basePath, (msg) => {
+		if (msg.url.resourceName === ".schema.json" && msg.method === "GET") {
+			return Promise.resolve(msg.setDataJson(schema, "application/schema+json"));
+		}
+
+		const val = stateData[msg.url.resourcePath] || stateData[slashTrim(msg.url.resourcePath)];
+		if (!val) {
+			return Promise.resolve(msg.setStatus(404, 'Not found'));
+		} else {
+			return Promise.resolve(msg.setDataJson(val, schemaInstanceMime(msg.url)));
+		}
+	});
+
+	if (readOnly === false) {
+		const writePath: ServiceFunction<TAdapter, TConfig> = (msg) => {
+			if (!msg.data) return Promise.resolve(msg.setStatus(400, 'No data to write'));
+			const item = stateData[msg.url.resourcePath] || stateData[slashTrim(msg.url.resourcePath)];
+			if (!item) {
+				return Promise.resolve(msg.setStatus(404, 'Not found'));
+			} else {
+				return Promise.resolve(msg.setDataJson(item, schemaInstanceMime(msg.url)));
+			}
+		}
+
+		service.postPath(basePath, writePath);
+		service.putPath(basePath, writePath);
+	}
 }

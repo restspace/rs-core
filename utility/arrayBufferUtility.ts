@@ -15,3 +15,13 @@ export function ab2b64(buf: ArrayBuffer): string {
     }
     return btoa(binary);
 }
+
+export function b642ab(buf: ArrayBuffer): ArrayBuffer {
+    const b64str = new TextDecoder().decode(buf);
+    const bstr = atob(b64str);
+    const bytes = new Uint8Array(bstr.length);
+    for (let i = 0; i < bytes.byteLength; i++) {
+        bytes[i] = bstr.charCodeAt(i);
+    }
+    return bytes.buffer;
+}

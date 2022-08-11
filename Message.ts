@@ -641,7 +641,7 @@ export class Message {
     }
 
     private static isUrl(url: string) {
-        return Url.urlRegex.test(url) || (url.startsWith('$') && !url.startsWith('$this'));
+        return (Url.urlRegex.test(url) || url.startsWith('$')) && !url.startsWith('$this');
     }
 
     private static isMethod(method: string) {

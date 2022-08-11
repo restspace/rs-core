@@ -61,8 +61,8 @@ export class Url {
     query: QueryStringArgs = {};
 
     private encodeQueryValue(s: string) {
-        const enc = encodeURI(s);
-        return enc.replace('&', '%26').replace('=', '%3D').replace('#', '%23');
+        //const enc = encodeURI(s);
+        return s.replace('&', '%26').replace('=', '%3D').replace('#', '%23');
     }
 
     get queryString(): string {

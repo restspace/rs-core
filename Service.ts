@@ -65,7 +65,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         });
     }
 
-    /** Add custom updates to the ServiceContext */
+    /** Add custom updates to the ServiceContext which require the config to be available */
     enhanceContext(context: ServiceContext<TAdapter>, config: TConfig): ServiceContext<TAdapter> {
         const proxyAdapterSource = context.manifest.proxyAdapterSource;
         if (proxyAdapterSource) {
@@ -168,7 +168,11 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     }
 
     initializer(initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => Promise<void>) {
-        this.initFunc = initFunc;
+
+        this.initFunc = (context: ServiceContext<TAdapter>, config: TConfig) => {
+            this.enhanceContext(context, config);
+            return initFunc(context, config);
+        };
     }
 
     /** Handle all GET method messages at or under the configured base path using the supplied ServiceFunction */

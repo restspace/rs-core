@@ -60,3 +60,23 @@ Deno.test('copy site rel', () => {
     const url2 = url.copy();
     assertEquals(url.toString(), url2.toString());
 });
+Deno.test('encodings slash', () => {
+    const url = new Url('/abc/def%2Fghi?mno=pqr&abc=def#123');
+    assertEquals(url.pathElements[1], 'def%2Fghi');
+    assertEquals(url.toString(), '/abc/def%2Fghi?mno=pqr&abc=def#123');
+});
+Deno.test('encodings space path output unencoded', () => {
+    const url = new Url('/abc/def%20ghi?mno=pqr&abc=def#123');
+    assertEquals(url.pathElements[1], 'def ghi');
+    assertEquals(url.toString(), '/abc/def ghi?mno=pqr&abc=def#123');
+});
+Deno.test('encodings space query output unencoded', () => {
+    const url = new Url('/abc/def/ghi?mno=pq r&abc=def#123');
+    assertEquals(url.query['mno'][0], 'pq r');
+    assertEquals(url.toString(), '/abc/def/ghi?mno=pq r&abc=def#123');
+});
+Deno.test('subtitution syntax legal', () => {
+    const url = new Url('/abc/def${ghi}?mno=pqr&abc=def#123');
+    assertEquals(url.pathElements[1], 'def${ghi}');
+    assertEquals(url.toString(), '/abc/def${ghi}?mno=pqr&abc=def#123');
+});
