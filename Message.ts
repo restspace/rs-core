@@ -6,7 +6,6 @@ import { isJson } from "./mimeType.ts";
 import parseRange from "https://cdn.skypack.dev/range-parser?dts";
 import { ab2str, str2ab } from "./utility/arrayBufferUtility.ts";
 import { after, getProp, upTo, upToLast } from "./utility/utility.ts";
-import { ServerRequest, Response as ServerResponse } from 'std/http/server.ts';
 import { IAuthUser } from "./user/IAuthUser.ts";
 import { AsyncQueue } from "./utility/asyncQueue.ts";
 import { ErrorObject, ValidateFunction } from "https://cdn.skypack.dev/ajv?dts";
@@ -274,14 +273,6 @@ export class Message {
             //if (this.data.size) res.setHeader('Content-Length', this.data.size.toString());
         }
         res.headers.set('X-Powered-By', 'Restspace');
-        return res;
-    }
-    toServerResponse() {
-        const res: ServerResponse = {
-            status: this.status || 200,
-            headers: this.mapHeaders(this.responseHeadersOnly(this.headers), new Headers()),
-            body: this.data ? this.data.asServerResponseBody() : undefined
-        }
         return res;
     }
 
@@ -581,11 +572,6 @@ export class Message {
         } else {
             return enc;
         }
-    }
-
-    static fromServerRequest(req: ServerRequest, tenant: string) {
-        const url = new Url(req.url);
-        return new Message(url, tenant, req.method as MessageMethod, req.headers, MessageBody.fromServerRequest(req) || undefined);
     }
 
     static fromRequest(req: Request, tenant: string) {

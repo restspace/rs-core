@@ -2,8 +2,6 @@ import { isJson, isText } from "./mimeType.ts";
 import { decodeURIComponentAndPlus } from "./utility/utility.ts";
 import { ab2b64, ab2str, str2ab } from "./utility/arrayBufferUtility.ts";
 import { stripBom } from "https://deno.land/x/string/mod.ts";
-import { ServerRequest } from 'std/http/server.ts';
-import { readerToStream } from "./streams/streams.ts";
 import { readerFromStreamReader } from "std/io/streams.ts"
 
 export class MessageBody {
@@ -176,15 +174,6 @@ export class MessageBody {
     //         }
     //     });
     // }
-
-    static fromServerRequest(req: ServerRequest): MessageBody | null {
-        const contentLength = req.headers.get('content-length');
-        const size = contentLength != null ? parseInt(contentLength) : NaN;
-        const contentType = req.headers.get('content-type');
-        return contentType && req.body
-            ? new MessageBody(readerToStream(req.body), contentType, isNaN(size) ? undefined : size)
-            : null;
-    }
 
     static fromRequest(req: Request): MessageBody | null {
         const contentLength = req.headers.get('content-length');
