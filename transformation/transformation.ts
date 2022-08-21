@@ -6,7 +6,9 @@ import { pathCombine } from "../utility/utility.ts";
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
-    const functionName = arr[0];
+    let functionName = arr[0];
+    if (!functionName.endsWith('()')) return '';
+    functionName = functionName.slice(0, -2);
     const args: string[] = [];
     for (let i = 1; i < arr.length; i++) {
         if (Array.isArray(arr[i])) {
@@ -78,7 +80,12 @@ export const transformation = (transformObject: any, data: any, url: Url): any =
         formatDate: (date: Date | string, format?: string) => 
             format === 'forQuery'
             ? `datetime'${dayjs(date).format().slice(0, -6)}'`
-            : dayjs(date).format(format)
+            : dayjs(date).format(format),
+        propsToList: (obj: Record<string, unknown>, keyProp?: string) =>
+            Object.entries(obj).map(([key, val]) => {
+                (val as any)[keyProp || '$key'] = key;
+                return val;
+            })
     }
 
     if (typeof transformObject === 'string') {
@@ -86,10 +93,11 @@ export const transformation = (transformObject: any, data: any, url: Url): any =
     } else if (Array.isArray(transformObject)) {
         if (transformObject.length === 0
             || typeof transformObject[0] !== 'string'
-            || !transformObject[0].endsWith("(")) {
+            || !transformObject[0].endsWith("()")) {
                 return transformObject.map(item => transformation(item, data, url));
         }
         const expr = arrayToFunction(transformObject, transformHelper);
+        console.log('expr ' + expr);
         const arrResult = evaluate(expr, data, transformHelper);
         return arrResult;
     } else {
