@@ -6,6 +6,7 @@ import { readerFromStreamReader } from "std/io/streams.ts"
 
 export class MessageBody {
     statusCode = 0;
+    wasMimeHandled = false;
 
     private _size?: number;
     /** Size of data in bytes */
