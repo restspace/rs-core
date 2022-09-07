@@ -64,6 +64,7 @@ export const transformation = (transformObject: any, data: any, url: Url): any =
                 return dir === 'desc' ? -res : res;
             }),
         expressionSort_expArgs: [1],
+        unique: (list: ArrayLike<any>) => !list ? [] : [...new Set(Array.from(list))],
         pathCombine,
         // expressionGroup: (list: ArrayLike<any>, expression: string) => !list ? [] : groupBy(Array.from(list),
         //     (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),

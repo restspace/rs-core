@@ -20,11 +20,15 @@ Deno.test('matches default string', function () {
     assertEquals(res, 'a/b/xyz');
 });
 Deno.test('matches query element', function () {
-    let res = resolvePathPattern("a/$?(q)/b", "/xyz", '', '', '', { p: "9", q: "1" });
+    let res = resolvePathPattern("a/$?(q)/b", "/xyz", '', '', '', { p: [ "9" ], q: [ "1" ] });
     assertEquals(res, 'a/1/b');
 });
+Deno.test('missing query element', function () {
+    let res = resolvePathPattern("a/$?(x)/b", "/xyz", '', '', '', { p: [ "9" ], q: [ "1" ] });
+    assertEquals(res, 'a//b');
+});
 Deno.test('matches whole query', function () {
-    let res = resolvePathPattern("a/b?$?*", "/xyz", '', '', '', { p: "9", q: "1" });
+    let res = resolvePathPattern("a/b?$?*", "/xyz", '', '', '', { p: [ "9" ], q: [ "1" ] });
     assertEquals(res, 'a/b?p=9&q=1');
 });
 Deno.test('works with no query and query subs', function () {

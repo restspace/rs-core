@@ -46,7 +46,7 @@ export function resolvePathPattern(pathPattern: string, currentPath: string, bas
         .replace('$*', currentPath + (isDirectory ? "/" : "") + fullQueryString(query))
         .replace('$$', encodeURIComponent(fullUrl || ''))
         .replace('$P*', fullPathParts.join('/') + (isDirectory ? "/" : "") + fullQueryString(query))
-        .replace('$N*', name || '$N*')
+        .replace('$N*', name || '')
         .replace(/\$([BSNP])?([<>]\d+)([<>]\d+)?(:\((.+?)\)|:\$([BSNP])?([<>]\d+)([<>]\d+)?)?/g, (_match, p1, p2, p3, p4, p5, p6, p7, p8) => {
             const partsMatch = getPartsMatch(p1, p2, p3);
             if (partsMatch || !p4) return partsMatch;
@@ -55,7 +55,7 @@ export function resolvePathPattern(pathPattern: string, currentPath: string, bas
         })
         .replace(/\$\?(\*|\((.+?)\))/g, (_match, p1, p2) => {
             if (p1 === '*') return queryString(query);
-            return (query || {})[p2] === [] ? '' : (query || {})[p2].join(',') || ''
+            return (query || {})[p2] === [] ? '' : ((query || {})[p2] || []).join(',') || ''
         });
     return result;
 }
