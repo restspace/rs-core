@@ -9,8 +9,15 @@ export type QueryStringArgs = Record<string, string[]>;
 export class Url {
     scheme = '';
     domain = '';
-    fragment = '';
     isRelative = false;
+
+    private _fragment = '';
+    get fragment(): string {
+        return this._fragment || this.query['$fragment']?.[0] || '';
+    }
+    set fragment(val: string) {
+        this._fragment = val;
+    }
 
     get path(): string {
         return (this.isRelative ? '' : '/') + this.pathElements.join('/') + (this.isDirectory && this.pathElements.length > 0 ? '/' : '');
@@ -141,8 +148,8 @@ export class Url {
         this._isDirectory = this.path.endsWith('/');
         const qs = urlParse[5];
         this.queryString = qs ? decodeURI(qs.substr(1)) : '';
-        this.fragment = urlParse[6];
-        this.fragment = this.fragment ? this.fragment.substr(1) : '';
+        const frag = urlParse[6];
+        this.fragment = frag ? frag.substr(1) : '';
     }
 
     hasBase(base: string) {

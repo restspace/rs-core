@@ -1,3 +1,4 @@
+import { parseMailList } from "https://deno.land/x/denomailer@1.2.0/config/mail/email.ts";
 import * as path from "std/path/mod.ts"
 
 export function slashTrim(s: string): string {
@@ -235,6 +236,13 @@ export function getProp(object: any, path: string[] | string, defaultVal?: any):
     }
   
     return getProp(object[path.shift() as string], path, defaultVal)
+}
+
+export function deleteProp(object: any, path: string[] | string) {
+    if (!path.length) return;
+    const parent = getProp(object, path.slice(0, -1));
+    if (parent === undefined) return;
+    delete parent[path.slice(-1)[0]];
 }
 
 export const setProp = (obj: any, path: string[] | string, value: any): any => {

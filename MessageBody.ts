@@ -1,5 +1,5 @@
 import { isJson, isText } from "./mimeType.ts";
-import { decodeURIComponentAndPlus } from "./utility/utility.ts";
+import { decodeURIComponentAndPlus, getProp } from "./utility/utility.ts";
 import { ab2b64, ab2str, str2ab } from "./utility/arrayBufferUtility.ts";
 import { stripBom } from "https://deno.land/x/string/mod.ts";
 import { readerFromStreamReader } from "std/io/streams.ts"
@@ -91,6 +91,12 @@ export class MessageBody {
         } else {
             return str;
         }
+    }
+
+    async extractPathIfJson(path: string) {
+        if (!isJson(this.mimeType)) return;
+        const val = await this.asJson();
+        this.data = str2ab(JSON.stringify(getProp(val, path)));
     }
 
     isTextual() {
