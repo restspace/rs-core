@@ -1,7 +1,7 @@
 import { assertEquals } from "std/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
 
-/*
+
 Deno.test('single var', function () {
     const input = {
         a: 1,
@@ -53,7 +53,7 @@ Deno.test('path key', function () {
     assertEquals(output.b.x, "zzz");
     assertEquals(output.b.y, "pqr");
 });
-*/
+
 Deno.test('path array', function () {
     const input = {
         a: "xyz",
@@ -93,6 +93,8 @@ Deno.test('path object loop', function () {
     assertEquals(output.b, { a: 'a-1', b: 'b-2', c: 'c-3' });
 });
 
+
+
 Deno.test('path array loop, not preexisting', function () {
     const input = {
         a: "xyz",
@@ -101,7 +103,7 @@ Deno.test('path array loop, not preexisting', function () {
     const transform = {
         "$this": "$this",
         "c": "b",
-        "c[item]": "b[item.index] * 2"
+        "c[item]": "outer.b[item.index] * 2"
     };
     const output = transformation(transform, input);
     assertEquals(output.c, [ 18, 16, 14 ]);
@@ -122,6 +124,7 @@ Deno.test('path array loop over objects', function () {
     assertEquals(output.c, [ { a: 1 }, { a: 3 }, { a: 5 } ]);
 });
 
+
 Deno.test('filter path array loop over objects', function () {
     const input = {
         a: "xyz",
@@ -129,8 +132,42 @@ Deno.test('filter path array loop over objects', function () {
     };
     const transform = {
         "c": "b",
-        "c[item]": "a > 2 ? item.value : undefined"
+        "c[ item ]": "a > 2 ? item.value : undefined"
     };
     const output = transformation(transform, input);
     assertEquals(output.c, [ { a: 3, b: 4 }, { a: 5, b: 6 } ]);
+});
+
+Deno.test('transform a list', function () {
+    const input = [
+        {
+            a: 1, b: 2
+        },
+        {
+            a: 3, b: 4
+        },
+        {
+            a: 5, b: 6
+        }
+    ];
+    const transform = {
+        "$this": "$this",
+        "[item]": { a: "a" }
+    };
+    const output = transformation(transform, input);
+    assertEquals(output, [ { a: 1 }, { a: 3 }, { a: 5 } ]);
+});
+
+Deno.test('convert object to list', function () {
+    const input = {
+        a: 1,
+        b: 2,
+        c: 3
+    };
+    const transform = {
+        "$this": "$this",
+        "[item]": "item.value"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output, [ 1, 2, 3 ]);
 });

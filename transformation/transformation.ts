@@ -112,9 +112,18 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
             if (key === '.' || key === '$this') continue;
             doTransformKey(key, 0, data, transformed, url, transformObject[key]);
         }
-        return transformed;
+        return rectifyObject(transformed);
     }
 }
+
+const rectifyObject = (obj: any) => {
+    let newObj = obj;
+    if ('length' in obj && !Array.isArray(obj)) {
+        newObj = Array.from(obj);
+    }
+
+    return newObj;
+};
 
 const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any) => {
     let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
@@ -123,20 +132,21 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         const effectiveKey = key.slice(keyStart);
         output[effectiveKey] = transformation(subTransform, input, url);
     } else if (match === '.') {
-        const keyPart = key.slice(keyStart, newKeyStart - 1);
+        const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
         if (!(keyPart in input)) return;
         if (!(keyPart in output)) output[keyPart] = {};
         console.log(`recursing path, new start: ${newKeyStart}, new output: ${JSON.stringify(output[keyPart])}`);
         doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform);
     } else if (match === '[' || match === '{') {
-        const keyPart = key.slice(keyStart, newKeyStart - 1);
+        const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
         let newOutput = output;
         if (keyPart) {
             if (!(keyPart in output)) output[keyPart] = match === '[' ? [] : {};
             newOutput = output[keyPart];
         }
-        const indexName = upTo(key, match === "[" ? "]" : "}", newKeyStart);
+        let indexName = upTo(key, match === "[" ? "]" : "}", newKeyStart);
         newKeyStart += indexName.length + 1;
+        indexName = indexName.trim();
         const remainingKey = key.slice(newKeyStart);
 
         const transformOrRecurse = (input: any, index: number | string) => {
@@ -150,8 +160,19 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         // plain numeric index in [] in path
         if (match === '[' && '0' <= indexName[0] && indexName[0] <= '9') {
             transformOrRecurse(input, parseInt(indexName));
-        } else if (match === '[' && Array.isArray(newOutput)) { // loop context name in [] in path
-            newOutput.forEach((item: any, idx: number) => {
+        } else if (match === '[') { // loop context name in [] in path
+            let list = newOutput;
+
+            if (!Array.isArray(newOutput)) {
+                list = Object.entries(newOutput).map(([k, v]) => (
+                    typeof v === 'object'
+                    ? { ...(v as any), "$key": k }
+                    : v
+                  ));
+                for (const k in newOutput) delete newOutput[k];
+            }
+
+            list.forEach((item: any, idx: number) => {
                 const newInput = {
                     ...item,
                     outer: input.outer || input,
@@ -159,12 +180,13 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
                 };
                 transformOrRecurse(newInput, idx);
             });
+            if (!('length' in newOutput)) newOutput.length = list.length;
             if (!remainingKey) { // remove items set to undefined (mutate newOutput)
                 for (let i = newOutput.length - 1; i >= 0; i--) {
                     if (newOutput[i] === undefined) newOutput.splice(i, 1);
                 }
             }
-        } else if (match === '{' && typeof newOutput === 'object') {
+        } else if (match === '{') {
             Object.entries(newOutput).forEach(([key, value]) => {
                 const newInput = {
                     ...(value as any),
