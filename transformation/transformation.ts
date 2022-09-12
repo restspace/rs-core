@@ -2,7 +2,8 @@ import { evaluate } from 'https://cdn.skypack.dev/bcx-expression-evaluator?dts';
 import dayjs from "https://cdn.skypack.dev/dayjs@1.10.4";
 import { Url } from "rs-core/Url.ts";
 import { resolvePathPatternWithUrl } from "rs-core/PathPattern.ts";
-import { pathCombine } from "../utility/utility.ts";
+import { firstMatch, pathCombine, scanFirst, upTo } from "../utility/utility.ts";
+import { eachItem } from 'https://cdn.skypack.dev/-/ajv@v8.11.0-6F7JuaBGOwHo7L2fdKpW/dist=es2019,mode=types/dist/compile/util.d.ts';
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
@@ -31,7 +32,7 @@ const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) =
     return `${functionName}(${args.join(', ')})`;
 }
 
-export const transformation = (transformObject: any, data: any, url: Url): any => {
+export const transformation = (transformObject: any, data: any, url: Url = new Url('/')): any => {
     /*
     {
         transfList: "transformMap(origList, { x: y + 1 })" // takes origList and applies transform object to map x to y + 1
@@ -109,8 +110,73 @@ export const transformation = (transformObject: any, data: any, url: Url): any =
         }
         for (const key in transformObject) {
             if (key === '.' || key === '$this') continue;
-            transformed[key] = transformation(transformObject[key], data, url);
+            doTransformKey(key, 0, data, transformed, url, transformObject[key]);
         }
         return transformed;
+    }
+}
+
+const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any) => {
+    let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
+    console.log(`match: ${match}, start: ${newKeyStart}`);
+    if (newKeyStart < 0) {
+        const effectiveKey = key.slice(keyStart);
+        output[effectiveKey] = transformation(subTransform, input, url);
+    } else if (match === '.') {
+        const keyPart = key.slice(keyStart, newKeyStart - 1);
+        if (!(keyPart in input)) return;
+        if (!(keyPart in output)) output[keyPart] = {};
+        console.log(`recursing path, new start: ${newKeyStart}, new output: ${JSON.stringify(output[keyPart])}`);
+        doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform);
+    } else if (match === '[' || match === '{') {
+        const keyPart = key.slice(keyStart, newKeyStart - 1);
+        let newOutput = output;
+        if (keyPart) {
+            if (!(keyPart in output)) output[keyPart] = match === '[' ? [] : {};
+            newOutput = output[keyPart];
+        }
+        const indexName = upTo(key, match === "[" ? "]" : "}", newKeyStart);
+        newKeyStart += indexName.length + 1;
+        const remainingKey = key.slice(newKeyStart);
+
+        const transformOrRecurse = (input: any, index: number | string) => {
+            if (remainingKey) {
+                doTransformKey(remainingKey, 0, input, newOutput[indexName], url, subTransform);
+            } else {
+                newOutput[index] = transformation(subTransform, input, url);
+            }
+        }
+
+        // plain numeric index in [] in path
+        if (match === '[' && '0' <= indexName[0] && indexName[0] <= '9') {
+            transformOrRecurse(input, parseInt(indexName));
+        } else if (match === '[' && Array.isArray(newOutput)) { // loop context name in [] in path
+            newOutput.forEach((item: any, idx: number) => {
+                const newInput = {
+                    ...item,
+                    outer: input.outer || input,
+                    [indexName]: { value: item, index: idx }
+                };
+                transformOrRecurse(newInput, idx);
+            });
+            if (!remainingKey) { // remove items set to undefined (mutate newOutput)
+                for (let i = newOutput.length - 1; i >= 0; i--) {
+                    if (newOutput[i] === undefined) newOutput.splice(i, 1);
+                }
+            }
+        } else if (match === '{' && typeof newOutput === 'object') {
+            Object.entries(newOutput).forEach(([key, value]) => {
+                const newInput = {
+                    ...(value as any),
+                    "$key": key,
+                    outer: input.outer || input,
+                    [indexName]: { key, value }
+                };
+                transformOrRecurse(newInput, key);
+            });
+            if (!remainingKey) { // remove properties with values set to undefined
+                newOutput = Object.fromEntries(Object.entries(newOutput).filter(([_, v]) => v !== undefined));
+            }
+        }
     }
 }

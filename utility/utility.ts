@@ -1,4 +1,3 @@
-import { parseMailList } from "https://deno.land/x/denomailer@1.2.0/config/mail/email.ts";
 import * as path from "std/path/mod.ts"
 
 export function slashTrim(s: string): string {
@@ -50,6 +49,11 @@ export function decodeURIComponentAndPlus(x: string): string {
     return decodeURIComponent(x.replace(/\+/g, '%20'));
 }
 
+/**
+ * Given a string, a set of possible matches to search for and a start position, it will
+ * find the first best occurence of a match and return the position of the beginning of the
+ * match together with the string matched
+ */
 export function firstMatch(s: string, possMatches: string[], start: number, includePartial = false): [ number, string ] {
     const res = possMatches.reduce(([ bestPos, bestMatch ], match) => {
         let pos = s.indexOf(match, start);
