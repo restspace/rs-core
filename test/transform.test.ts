@@ -13,6 +13,20 @@ Deno.test('single var', function () {
     const output = transformation(transform, input);
     assertEquals(output.q, 1);
 });
+Deno.test('subobject', function () {
+    const input = {
+        a: 1,
+        b: {
+            x: 10,
+            y: 20
+        }
+    };
+    const transform = {
+        "b": "b.x"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.b, 10);
+});
 Deno.test('this override', function () {
     const input = {
         a: 1,

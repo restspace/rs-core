@@ -247,9 +247,14 @@ export class Message {
     }
 
     private responseHeadersOnly(headers: Record<string, string | string[]>) {
+        const isContentDispositionFormData = (k: string, v: string | string[]) =>
+            k.toLowerCase() === 'content-disposition'
+            && !Array.isArray(v)
+            && v.startsWith('form-data');
+
         return Object.fromEntries(Object.entries(headers)
             .filter(([k, v]) => sendHeaders.indexOf(k.toLowerCase()) >= 0
-                && (k.toLowerCase() !== 'content-disposition' || Array.isArray(v) || v.startsWith('form-data')))
+                && !isContentDispositionFormData(k, v))
         );
     }
 
