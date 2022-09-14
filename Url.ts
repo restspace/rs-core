@@ -118,7 +118,7 @@ export class Url {
 
     subPathElementCount = 0;
     get subPathElements(): string[] {
-        return this.pathElements.slice(-this.subPathElementCount);
+        return this.subPathElementCount <= 0 ? [] : this.pathElements.slice(-this.subPathElementCount);
     }
     set subPathElements(els: string[]) {
         if (els.length <= this.pathElements.length && arrayEqual(els, this.pathElements.slice(-els.length)))
@@ -177,6 +177,15 @@ export class Url {
 
     baseUrl() {
         return `${this.scheme || ''}${this.domain || ''}/${this.basePathElements.join('/')}`;
+    }
+
+    setSubpathFromUrl(servicePathUrl: string | Url | undefined) {
+        if (servicePathUrl === undefined) return;
+        if (typeof servicePathUrl === 'string') {
+            servicePathUrl = new Url(servicePathUrl);
+        }
+        this.subPathElementCount = this.pathElements.length - servicePathUrl.pathElements.length;
+        return this;
     }
 
     follow(relativeUrl: string) {
