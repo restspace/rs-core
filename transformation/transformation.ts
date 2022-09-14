@@ -127,7 +127,6 @@ const rectifyObject = (obj: any) => {
 
 const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any) => {
     let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
-    console.log(`match: ${match}, start: ${newKeyStart}`);
     if (newKeyStart < 0) {
         const effectiveKey = key.slice(keyStart);
         output[effectiveKey] = transformation(subTransform, input, url);
