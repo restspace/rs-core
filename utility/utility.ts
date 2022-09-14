@@ -13,6 +13,10 @@ export function slashTrimLeft(s: string): string {
     return s.startsWith('/') ? s.substr(1) : s;
 }
 
+export function pathToArray(path: string) {
+    return slashTrim(path).split('/').filter(s => !!s);
+}
+
 export function getExtension(s: string): string {
     let extStart = s.lastIndexOf('.');
     return extStart < 0 ? '' : s.substr(extStart + 1);

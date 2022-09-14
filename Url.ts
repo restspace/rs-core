@@ -1,4 +1,4 @@
-import { slashTrim, pathCombine, decodeURIComponentAndPlus, last, arrayEqual } from "./utility/utility.ts";
+import { slashTrim, pathCombine, decodeURIComponentAndPlus, last, arrayEqual, pathToArray } from "./utility/utility.ts";
 import { resolvePathPatternWithUrl } from "./PathPattern.ts";
 
 export type QueryStringArgs = Record<string, string[]>;
@@ -104,7 +104,7 @@ export class Url {
         return this.servicePathElements.join('/') + (this.isDirectory ? '/' : '');
     }
     set servicePath(path: string) {
-        this.pathElements = [ ...this.basePathElements, ...slashTrim(path).split('/') ];
+        this.pathElements = [ ...this.basePathElements, ...pathToArray(path) ];
         this._isDirectory = path.endsWith('/') || (this.pathElements.length === 0 && path === '');
     }
 
