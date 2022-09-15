@@ -116,19 +116,19 @@ export class Url {
         return this.pathElements.slice(this.basePathElementCount);
     }
 
-    subPathElementCount = 0;
+    subPathElementCount = null as number | null;
     get subPathElements(): string[] {
-        return this.subPathElementCount <= 0 ? [] : this.pathElements.slice(-this.subPathElementCount);
+        return this.subPathElementCount === null || this.subPathElementCount <= 0 ? [] : this.pathElements.slice(-this.subPathElementCount);
     }
     set subPathElements(els: string[]) {
-        if (els.length <= this.pathElements.length && arrayEqual(els, this.pathElements.slice(-els.length)))
+        if (els.length <= this.pathElements.length && arrayEqual(els, els.length === 0 ? [] : this.pathElements.slice(-els.length)))
             this.subPathElementCount = els.length;
         else
-            this.subPathElementCount = 0;
+            this.subPathElementCount = null;
     }
 
     get mainPathElementCount() {
-        return this.pathElements.length - this.basePathElementCount - this.subPathElementCount;
+        return this.pathElements.length - this.basePathElementCount - (this.subPathElementCount || 0);
     }
     set mainPathElementCount(count: number) {
         this.subPathElementCount = this.pathElements.length - this.basePathElementCount - count;
