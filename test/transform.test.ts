@@ -199,3 +199,28 @@ Deno.test('convert object to list', function () {
     const output = transformation(transform, input);
     assertEquals(output, [ 1, 2, 3 ]);
 });
+
+Deno.test('avoid output multiple paths pointing to same data', function () {
+    const input = {
+        a: [ 1, 2, 3 ]
+    };
+    const transform = {
+        "$this": "$this",
+        "b": "a",
+        "b[0]": "9"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.a[0], 1);
+});
+Deno.test('avoid output multiple paths pointing to same data (deep)', function () {
+    const input = {
+        a: [ { x: 1}, { y: 2 }, { z: 3 } ]
+    };
+    const transform = {
+        "$this": "$this",
+        "b": "a",
+        "b[1].y": "9"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.a[1].y, 2);
+});

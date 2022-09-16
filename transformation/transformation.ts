@@ -2,7 +2,7 @@ import { evaluate } from 'https://cdn.skypack.dev/bcx-expression-evaluator?dts';
 import dayjs from "https://cdn.skypack.dev/dayjs@1.10.4";
 import { Url } from "rs-core/Url.ts";
 import { resolvePathPatternWithUrl } from "rs-core/PathPattern.ts";
-import { firstMatch, pathCombine, scanFirst, upTo } from "../utility/utility.ts";
+import { firstMatch, pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts";
 import { eachItem } from 'https://cdn.skypack.dev/-/ajv@v8.11.0-6F7JuaBGOwHo7L2fdKpW/dist=es2019,mode=types/dist/compile/util.d.ts';
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
@@ -106,7 +106,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         let transformed: any = {};
         const selfObject = transformObject['$this'] || transformObject['.'];
         if (selfObject) {
-            transformed = transformation(selfObject, data, url);
+            transformed = shallowCopy(transformation(selfObject, data, url));
         }
         for (const key in transformObject) {
             if (key === '.' || key === '$this') continue;
@@ -129,18 +129,26 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
     let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
     if (newKeyStart < 0) {
         const effectiveKey = key.slice(keyStart);
-        output[effectiveKey] = transformation(subTransform, input, url);
+        output[effectiveKey] = shallowCopy(transformation(subTransform, input, url));
     } else if (match === '.') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
         if (!(keyPart in input)) return;
-        if (!(keyPart in output)) output[keyPart] = {};
+        if (!(keyPart in output)) {
+            output[keyPart] = {};
+        } else {
+            output[keyPart] = shallowCopy(output[keyPart]);
+        }
         console.log(`recursing path, new start: ${newKeyStart}, new output: ${JSON.stringify(output[keyPart])}`);
         doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform);
     } else if (match === '[' || match === '{') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
         let newOutput = output;
         if (keyPart) {
-            if (!(keyPart in output)) output[keyPart] = match === '[' ? [] : {};
+            if (!(keyPart in output)) {
+                output[keyPart] = match === '[' ? [] : {};
+            } else {
+                output[keyPart] = shallowCopy(output[keyPart]);
+            }
             newOutput = output[keyPart];
         }
         let indexName = upTo(key, match === "[" ? "]" : "}", newKeyStart);
@@ -152,7 +160,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
             if (remainingKey) {
                 doTransformKey(remainingKey, 0, input, newOutput[indexName], url, subTransform);
             } else {
-                newOutput[index] = transformation(subTransform, input, url);
+                newOutput[index] = shallowCopy(transformation(subTransform, input, url));
             }
         }
 

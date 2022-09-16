@@ -236,6 +236,12 @@ function isPrimitive(obj: any)
     return (obj !== Object(obj));
 }
 
+export function shallowCopy(value: any) {
+    if (Array.isArray(value)) return [ ...value ];
+    if (typeof value === 'object') return { ...value };
+    return value;
+}
+
 export function getProp(object: any, path: string[] | string, defaultVal?: any): any {
     if (!Array.isArray(path)) path = path.toString().match(/[^.[\]]+/g) || [];
   
