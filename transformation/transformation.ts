@@ -173,6 +173,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
 
             list.forEach((item: any, idx: number) => {
                 const newInput = {
+                    ...input,
                     ...item,
                     outer: input.outer || input,
                     [indexName]: { value: item, index: idx }
@@ -188,6 +189,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         } else if (match === '{') {
             Object.entries(newOutput).forEach(([key, value]) => {
                 const newInput = {
+                    ...input,
                     ...(value as any),
                     "$key": key,
                     outer: input.outer || input,

@@ -117,6 +117,20 @@ Deno.test('path array loop, not preexisting', function () {
     const transform = {
         "$this": "$this",
         "c": "b",
+        "c[item]": "b[item.index] * 2"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.c, [ 18, 16, 14 ]);
+});
+
+Deno.test('path array loop, not preexisting, outer', function () {
+    const input = {
+        a: "xyz",
+        b: [ 9, 8, 7 ]
+    };
+    const transform = {
+        "$this": "$this",
+        "c": "b",
         "c[item]": "outer.b[item.index] * 2"
     };
     const output = transformation(transform, input);
