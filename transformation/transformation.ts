@@ -2,8 +2,7 @@ import { evaluate } from 'https://cdn.skypack.dev/bcx-expression-evaluator?dts';
 import dayjs from "https://cdn.skypack.dev/dayjs@1.10.4";
 import { Url } from "rs-core/Url.ts";
 import { resolvePathPatternWithUrl } from "rs-core/PathPattern.ts";
-import { firstMatch, pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts";
-import { eachItem } from 'https://cdn.skypack.dev/-/ajv@v8.11.0-6F7JuaBGOwHo7L2fdKpW/dist=es2019,mode=types/dist/compile/util.d.ts';
+import { pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts";
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
@@ -32,6 +31,17 @@ const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) =
     return `${functionName}(${args.join(', ')})`;
 }
 
+const doEvaluate = (expression: string, context: any, helper: any) => {
+    try {
+        return evaluate(expression, context, helper);
+    } catch (err) {
+        throw SyntaxError('Transform failed', {
+            cause: err,
+            fileName: expression
+        } as ErrorOptions);
+    }
+}
+
 export const transformation = (transformObject: any, data: any, url: Url = new Url('/')): any => {
     /*
     {
@@ -44,23 +54,23 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
             !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url)),
         expressionReduce: (list: ArrayLike<any>, init: any, expression: string) => !list ? init : Array.from(list).reduce(
-            (partial, item) => evaluate(expression, partial, Object.assign({}, transformHelper, data, item)),
+            (partial, item) => doEvaluate(expression, partial, Object.assign({}, transformHelper, data, item)),
             init),
         expressionReduce_expArgs: [2],
         expressionMap: (list: ArrayLike<any>, expression: string) => !list ? [] : Array.from(list).map(
-            (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
+            (item) => doEvaluate(expression, item, Object.assign({}, transformHelper, data))),
         expressionMap_expArgs: [1],
         expressionFilter: (list: ArrayLike<any>, expression: string) => !list ? [] : Array.from(list).filter(
-            (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
+            (item) => doEvaluate(expression, item, Object.assign({}, transformHelper, data))),
         expressionFilter_expArgs: [1],
         expressionFind: (list: ArrayLike<any>, expression: string) => !list ? null : Array.from(list).find(
-            (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
+            (item) => doEvaluate(expression, item, Object.assign({}, transformHelper, data))),
         expressionFind_expArgs: [1],
         expressionSort: (list: ArrayLike<any>, expression: string, dir?: string) => !list ? null : Array.from(list).sort(
             (a, b) => {
                 const ctx = Object.assign({}, transformHelper, data);
-                const expA = evaluate(expression, a, ctx);
-                const expB = evaluate(expression, b, ctx);
+                const expA = doEvaluate(expression, a, ctx);
+                const expB = doEvaluate(expression, b, ctx);
                 const res = expA == expB ? 0 : (expA < expB ? -1 : 1)
                 return dir === 'desc' ? -res : res;
             }),
@@ -91,7 +101,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
     }
 
     if (typeof transformObject === 'string') {
-        return evaluate(transformObject, data, transformHelper);
+        return doEvaluate(transformObject, data, transformHelper);
     } else if (Array.isArray(transformObject)) {
         if (transformObject.length === 0
             || typeof transformObject[0] !== 'string'
@@ -100,7 +110,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         }
         const expr = arrayToFunction(transformObject, transformHelper);
         console.log('expr ' + expr);
-        const arrResult = evaluate(expr, data, transformHelper);
+        const arrResult = doEvaluate(expr, data, transformHelper);
         return arrResult;
     } else {
         let transformed: any = {};

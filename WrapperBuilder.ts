@@ -35,7 +35,14 @@ const applyTransform = async <TConfig extends IServiceConfig = IServiceConfig>(t
 		if (typeof transform == "function") {
 			return transform(json, resp, config);
 		} else {
-			return transformation(transform, { json, config, resp }, resp.url);
+			try {
+				return transformation(transform, { json, config, resp }, resp.url);
+			} catch (err) {
+				if (err instanceof SyntaxError) {
+					const errx = err as SyntaxError & { filename: string };
+					return resp.setStatus(400, `${errx.message} at: ${errx.filename} cause: ${errx.cause}`);
+				}
+			}
 		}
 	} else {
 		return await resp.data.asJson();

@@ -191,6 +191,92 @@ export function mergeDeep(target: any, ...sources: Record<string, any>[]): any {
     return mergeDeep(target, ...sources);
 }
 
+export function patch(target: any, patchData: any) {
+    if (Array.isArray(patchData)) {
+        if (!Array.isArray(target)) return patchData;
+        let strategy = "positional";
+        let id = "";
+        if (patchData[0]) {
+            const strategies = [ 'replace', 'append', 'prepend', 'positional', 'id-replace', 'id-patch' ];
+            let config: any = null;
+            if (typeof patchData[0] === 'object' && '$strategy' in patchData[0] && strategies.includes(patchData[0].$strategy)) {
+                strategy = patchData[0].$strategy;
+                config = patchData.shift();
+            }
+            if (config && '$id' in config && strategy.startsWith('id-')) {
+                id = config.$id;
+            }
+        }
+
+        switch (strategy) {
+            case 'positional':
+                for (let idx = 0; idx < patchData.length; idx++) {
+                    if (idx < target.length) {
+                        target[idx] = patch(target[idx], patchData[idx]);
+                    } else {
+                        target.push(patch(target[idx], patchData[idx]));
+                    }
+                }
+                return target;
+            case 'replace':
+                return [ ...patchData ];
+            case 'append':
+                patchData.forEach(val => target.push(val));
+                return target;
+            case 'prepend': {
+                for (let idx = patchData.length - 1; idx >= 0; idx--) {
+                    target.unshift(patchData[idx]);
+                }
+                return target;
+            }
+            case 'id-replace': {
+                const newList = [] as any[];
+                patchData.forEach(val => {
+                    if (val[id]) {
+                        const targetItem = target.find(ti => ti[id] === val[id]);
+                        if (targetItem) {
+                            newList.push(patch(targetItem, val));
+                        } else {
+                            newList.push(val);
+                        }
+                    }
+                });
+                return newList;
+            }
+            case 'id-patch': {
+                const newList = [ ...target ];
+                patchData.forEach(val => {
+                    if (val[id]) {
+                        const targetIdx = newList.findIndex(nl => nl[id] === val[id]);
+                        if (targetIdx >= 0) {
+                            newList[targetIdx] = patch(newList[targetIdx], val);
+                        } else {
+                            newList.push(val);
+                        }
+                    }
+                });
+                return newList;
+            }
+        }
+    } else if (typeof patchData === "object") {
+        if (Array.isArray(target) || !(typeof target === "object")) return patchData;
+        for (const prop in patchData) {
+            if (target[prop]) {
+                if (patchData[prop] === undefined) {
+                    delete target[prop];
+                } else {
+                    target[prop] = patch(target[prop], patchData[prop]);
+                }
+            } else {
+                target[prop] = patchData[prop];
+            }
+        }
+        return target;
+    } else {
+        return patchData;
+    }
+}
+
 export function deepEqual(obj1: any, obj2: any) {
 
     if (obj1 === obj2) // it's just the same object. No need to compare.
