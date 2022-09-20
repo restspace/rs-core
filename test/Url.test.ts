@@ -8,6 +8,26 @@ Deno.test('sets service path correctly', function () {
     assertEquals(url.path, '/base1/base2/spx/spy');
     assert(!url.isRelative);
 });
+Deno.test('sets subpath correctly', function () {
+    const url = new Url('/base1/base2/sp1/sup1/sup2');
+    url.basePathElementCount = 2;
+    url.setSubpathFromUrl('/base1/base2/sp1');
+    assertEquals(url.subPathElements, [ 'sup1', 'sup2' ]);
+});
+Deno.test('sets subpath correctly, empty', function () {
+    const url = new Url('/base1/base2/sp1');
+    url.basePathElementCount = 2;
+    url.setSubpathFromUrl('/base1/base2/sp1');
+    assertEquals(url.subPathElements, [ ]);
+    assertEquals(url.subPathElementCount, 0);
+});
+Deno.test('sets subpath correctly, empty', function () {
+    const url = new Url('/base1/base2/sp1');
+    url.basePathElementCount = 2;
+    url.setSubpathFromUrl('/base1/base2/sp1');
+    assertEquals(url.subPathElements, [ ]);
+    assertEquals(url.subPathElementCount, 0);
+});
 Deno.test('creates a url correctly from a root path', function () {
     const url = Url.fromPath('/');
     assertEquals(url.path, '/');

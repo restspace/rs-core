@@ -1,4 +1,4 @@
-import { assertEquals } from "std/testing/asserts.ts";
+import { assertEquals, assertThrows } from "std/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
 
 
@@ -12,6 +12,27 @@ Deno.test('single var', function () {
     };
     const output = transformation(transform, input);
     assertEquals(output.q, 1);
+});
+Deno.test('error generation', function () {
+    const input = {
+        a: 1,
+        b: 2
+    };
+    const transform = {
+        q: "n"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.q, undefined);
+});
+Deno.test('error generation 2', function () {
+    const input = {
+        a: 1,
+        b: 2
+    };
+    const transform = {
+        q: "/abc/def"
+    };
+    assertThrows(() => transformation(transform, input));
 });
 Deno.test('subobject', function () {
     const input = {

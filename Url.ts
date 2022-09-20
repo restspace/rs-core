@@ -179,10 +179,14 @@ export class Url {
         return `${this.scheme || ''}${this.domain || ''}/${this.basePathElements.join('/')}`;
     }
 
+    /** Sets the subpath url based on the provided servicePathUrl, which is an absolute or site-relative url
+     * equal to the service path. If this is set to undefined, it indicates there's no subpath. If it's set to
+     * the empty string, it means there is a subpath which is /.
+     */
     setSubpathFromUrl(servicePathUrl: string | Url | undefined) {
         if (servicePathUrl === undefined) return;
         if (typeof servicePathUrl === 'string') {
-            servicePathUrl = new Url(servicePathUrl);
+            servicePathUrl = servicePathUrl ? new Url(servicePathUrl) : this;
         }
         this.subPathElementCount = this.pathElements.length - servicePathUrl.pathElements.length;
         return this;
