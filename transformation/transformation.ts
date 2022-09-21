@@ -97,7 +97,8 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
             Object.entries(obj).map(([key, val]) => {
                 (val as any)[keyProp || '$key'] = key;
                 return val;
-            })
+            }),
+        literal: (obj: Record<string, unknown>) => obj
     }
 
     if (typeof transformObject === 'string') {
