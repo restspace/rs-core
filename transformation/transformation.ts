@@ -98,7 +98,10 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
                 (val as any)[keyProp || '$key'] = key;
                 return val;
             }),
-        literal: (obj: Record<string, unknown>) => obj
+        literal: (obj: Record<string, unknown>) => obj,
+        merge: (val0: any, val1: any) =>  {
+            return Object.assign({}, val0, val1);
+        }
     }
 
     if (typeof transformObject === 'string') {
