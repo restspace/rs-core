@@ -101,7 +101,9 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         literal: (obj: Record<string, unknown>) => obj,
         merge: (val0: any, val1: any) =>  {
             return Object.assign({}, val0, val1);
-        }
+        },
+        parseInt: (s: string, radix?: number) => parseInt(s, radix),
+        parseFloat: (s: string) => parseFloat(s)
     }
 
     if (typeof transformObject === 'string') {
@@ -193,12 +195,15 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
                 for (const k in newOutput) delete newOutput[k];
             }
 
+            const loopItem = {} as Record<string, unknown>;
             list.forEach((item: any, idx: number) => {
+                loopItem['value'] = item;
+                loopItem['index'] = idx;
                 const newInput = {
                     ...input,
                     ...item,
                     outer: input.outer || input,
-                    [indexName]: { value: item, index: idx }
+                    [indexName]: loopItem
                 };
                 transformOrRecurse(newInput, idx);
             });

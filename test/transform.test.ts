@@ -13,6 +13,17 @@ Deno.test('single var', function () {
     const output = transformation(transform, input);
     assertEquals(output.q, 1);
 });
+Deno.test('parseInt', function () {
+    const input = {
+        a: 1,
+        b: "2"
+    };
+    const transform = {
+        q: "parseInt(b)"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.q, 2);
+});
 Deno.test('error generation', function () {
     const input = {
         a: 1,
@@ -127,8 +138,6 @@ Deno.test('path object loop', function () {
     const output = transformation(transform, input);
     assertEquals(output.b, { a: 'a-1', b: 'b-2', c: 'c-3' });
 });
-
-
 
 Deno.test('path array loop, not preexisting', function () {
     const input = {
