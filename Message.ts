@@ -495,7 +495,8 @@ export class Message {
         let obj = {};
         const hasData = (mimeType: string) => isJson(mimeType) || mimeType === 'application/x-www-form-urlencoded';
         // include object if there's data, it's json and it includes an object macro
-        if (this.data && this.data.mimeType && hasData(this.data.mimeType) && spec.indexOf('${') >= 0) {
+        const specHasObjectMacro = spec.indexOf('${') >= 0 || spec.indexOf(' $this') >= 0;
+        if (this.data && this.data.mimeType && hasData(this.data.mimeType) && specHasObjectMacro) {
             obj = await this.data.asJson();
         }
         const msgs = Message.fromSpec(spec, this.tenant, effectiveUrl || this.url, obj, defaultMethod, this.name, inheritMethod, headers);

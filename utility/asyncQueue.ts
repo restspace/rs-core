@@ -20,6 +20,14 @@ type AsyncQueueState = "running" | "no-enqueue" | "all-enqueued" | "closed";
 
 type AsyncQueueEvent<T> = { statechange( state: string ): any, enqueue(value: T | Error | null | AsyncQueue<T>): any };
 
+/**
+ * An AsyncQueue is an async iterator where calling next() for the next iteration returns a promise. The promise returns an enqueued
+ * value as quickly as possible: if one exists it resolves immediately popping that value, if one does not it waits for one to be
+ * enqueued. The iterator terminates either after a known fixed number of enqueues, or else after it is closed. Enqueuing a promise
+ * queues the resolved value of the promise when it resolves. Enqueuing another AsyncQueue makes that queue a 'child'. The items in
+ * that queue will be enqueued as they are available. The enqueued AsyncQueue does not count towards the fixed number of enqueues and
+ * neither do the items returned from it.
+ */
 export class AsyncQueue<T> implements AsyncIterator<T> {
     private _values: ArrayQueue<T | Error>;
     private _settlers: ArrayQueue<ResolveReject<T>>;
