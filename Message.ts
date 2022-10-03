@@ -637,7 +637,7 @@ export class Message {
     }
 
     private static isMethod(method: string) {
-        return [ "GET", "POST", "PUT", "OPTIONS", "HEAD", "PATCH", "$METHOD" ].includes(method);
+        return [ "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "$METHOD" ].includes(method);
     }
 
 
