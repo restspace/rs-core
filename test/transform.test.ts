@@ -1,7 +1,6 @@
 import { assertEquals, assertThrows } from "std/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
 
-
 Deno.test('single var', function () {
     const input = {
         a: 1,
@@ -228,6 +227,49 @@ Deno.test('convert object to list', function () {
     };
     const output = transformation(transform, input);
     assertEquals(output, [ 1, 2, 3 ]);
+});
+
+Deno.test('list multilevel', function () {
+    const input = [
+        {
+            val: [ 1, 10, 100 ]
+        },
+        {
+            val: [ 2, 20, 200 ]
+        },
+        {
+            val: [ 3, 30, 300 ]
+        }
+    ];
+    const transform = {
+        "$this": "$this",
+        "[item].val[subitem]": "subitem.value * 2"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output, [ { val: [ 2, 20, 200 ] }, { val: [ 4, 40, 400 ] }, { val: [ 6, 60, 600 ] } ]);
+});
+
+Deno.test('list flatten', function () {
+    const input = {
+        list: [
+            {
+                val: [ 1, 10, 100 ]
+            },
+            {
+                val: [ 2, 20, 200 ]
+            },
+            {
+                val: [ 3, 30, 300 ]
+            }
+        ],
+        x:[]
+    };
+    const transform = {
+        "$this": "$this",
+        "list[item].val[subitem]": "outer.x.push(subitem.value)"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.x, [1, 10, 100, 2, 20, 200, 3, 30, 300]);
 });
 
 Deno.test('avoid output multiple paths pointing to same data', function () {

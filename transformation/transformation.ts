@@ -157,7 +157,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         console.log(`recursing path, new start: ${newKeyStart}, new output: ${JSON.stringify(output[keyPart])}`);
         doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform);
     } else if (match === '[' || match === '{') {
-        const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
+        const keyPart = key.slice(keyStart, newKeyStart - 1).trim(); // the property key before the array
         let newOutput = output;
         if (keyPart) {
             if (!(keyPart in output)) {
@@ -170,11 +170,11 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         let indexName = upTo(key, match === "[" ? "]" : "}", newKeyStart);
         newKeyStart += indexName.length + 1;
         indexName = indexName.trim();
-        const remainingKey = key.slice(newKeyStart);
+        const remainingKey = key.slice(newKeyStart + 1);
 
         const transformOrRecurse = (input: any, index: number | string) => {
             if (remainingKey) {
-                doTransformKey(remainingKey, 0, input, newOutput[indexName], url, subTransform);
+                doTransformKey(remainingKey, 0, input, newOutput[index], url, subTransform);
             } else {
                 newOutput[index] = shallowCopy(transformation(subTransform, input, url));
             }
