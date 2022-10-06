@@ -252,7 +252,7 @@ Deno.test('flatmaps sync', async function() {
 Deno.test('flatmaps async', async function() {
     const asq = new AsyncQueue<number>(2);
     asq.enqueue(0);
-    setTimeout(() => asq.enqueue(1), 200);
+    setTimeout(() => asq.enqueue(1), 50);
     let check = 0;
     for await (const pull of asq.flatMap(item =>
         new Promise((resolve) => setTimeout(() => resolve(item * 2), 200)))) {

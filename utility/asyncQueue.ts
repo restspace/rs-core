@@ -34,6 +34,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
     private _nPassed = 0;
     private _nActiveChildren = 0;
     private _state: AsyncQueueState = "running";
+    private _nAwaiting = 0;
 
     static queueCount = 0;
     private _qid: number;
@@ -61,7 +62,8 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
             this._state = "no-enqueue";
         }
         if (this._state === "no-enqueue"
-            && this._nActiveChildren === 0) {
+            && this._nActiveChildren === 0
+            && this._nAwaiting === 0) {
             this.emitter.emit('statechange', 'all-enqueued');
             this._state = "all-enqueued";
         }
@@ -83,11 +85,18 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
         }
         
         if (value instanceof Promise) {
+            this._nAwaiting++;
             value
-                .then(res => this.innerEnqueue(res, false))
+                .then(res => {
+                    this.innerEnqueue(res, false, true);
+                    this._nAwaiting--;
+                    this.updateState();
+                })
                 .catch(reason => {
                     if (!(reason instanceof Error)) reason = new Error(reason.toString());
-                    this.innerEnqueue(reason as Error, false);
+                    this.innerEnqueue(reason as Error, false, true);
+                    this._nAwaiting--;
+                    this.updateState();
                 });
         } else {
             this.innerEnqueue(value, false);
@@ -95,9 +104,9 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
         return this;
     }
 
-    private innerEnqueue(value: T | Error | null | AsyncQueue<T>, fromChild: boolean) {
-        if (this._state !== "running"
-            && !(this._state === 'no-enqueue' && fromChild)) {
+    private innerEnqueue(value: T | Error | null | AsyncQueue<T>, fromChild: boolean, fromPromise?: boolean) {
+        const allowedNoenqueue = this._state == "no-enqueue" && (fromChild || fromPromise);
+        if (this._state !== "running" && !allowedNoenqueue) {
             throw new Error('Illegal internal enqueue after closed');
         }
 
@@ -196,6 +205,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
     // of a function passed in to their outputs
     flatMap(mapper: (item: T) => T | AsyncQueue<T> | Promise<T | AsyncQueue<T>> | Error | null | undefined): AsyncQueue<T> {
         const newAsq = new AsyncQueue<T>();
+        let nAwaiting = 0;
         const getResultsAsync = async () => {
             try
             {
@@ -203,11 +213,21 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
                     let res: T | AsyncQueue<T> | Promise<T | AsyncQueue<T>> | Error | null | undefined;
                     try {
                         res = mapper(item);
+                        // don't wait for promises to resolve, but only close when all are
+                        // resolved
                         if (res instanceof Promise) {
-                            res = await res;
-                        }
-                        if (res !== undefined) {
-                            newAsq.enqueue(res);
+                            nAwaiting++;
+                            res.then(res2 => {
+                                if (res2 !== undefined) newAsq.enqueue(res2);
+                                nAwaiting--;
+                                if (nAwaiting <= 0) newAsq.close();
+                            }).catch(err => {
+                                newAsq.enqueue(err);
+                                nAwaiting--;
+                                if (nAwaiting <= 0) newAsq.close();
+                            });
+                        } else {
+                            if (res !== undefined) newAsq.enqueue(res);
                         }
                     } catch (err) {
                         newAsq.enqueue(err);
@@ -216,7 +236,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
             } catch (err) {
                 newAsq.enqueue(err);
             }
-            newAsq.close();
+            if (nAwaiting <= 0) newAsq.close();
         };
         getResultsAsync();
         return newAsq;
