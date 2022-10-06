@@ -15,6 +15,8 @@ export interface IServiceConfig {
     infraName?: string;
     adapterConfig?: Record<string, unknown>;
     proxyAdapterConfig?: Record<string, unknown>;
+    prePipeline?: PipelineSpec;
+    postPipeline?: PipelineSpec;
     manifestConfig?: IConfigFromManifest;
 }
 
@@ -52,9 +54,27 @@ export interface IServiceConfigTemplate {
     adapterSource?: string;
     infraName?: string;
     adapterConfig?: Record<string, unknown>;
+    proxyAdapterConfig?: Record<string, unknown>;
+    prePipeline?: PipelineSpec;
+    postPipeline?: PipelineSpec;
 }
 
 export const schemaIServiceConfig = {
+    "$id": "http://restspace.io/services/serviceConfig",
+    "definitions": {
+        "pipeline": {
+            "type": "array",
+            "items": {
+                "type": [ "string", "array", "object" ],
+                "oneOf": [
+                    { "title": "request", "type": "string" },
+                    { "title": "subpipeline", "$ref": "#/definitions/pipeline" },
+                    { "title": "transform", "type": "object" }
+                ],
+                "editor": "oneOfRadio"
+            }
+        }
+    },
     "type": "object",
     "properties": {
         "name": { "type": "string" },
@@ -78,17 +98,22 @@ export const schemaIServiceConfig = {
         },
         "adapterSource": { "type": "string", "description": "Url from which to request adapter manifest" },
         "infraName": { "type": "string", "description": "Infrastructure adapter to use instead of an adapter source" },
-        "adapterConfig": { "type": "object", "description": "Configuration for the adapter", "properties": {} }
+        "adapterConfig": { "type": "object", "description": "Configuration for the adapter", "properties": {} },
+        "proxyAdapterConfig": { "type": "object", "description": "Configuration for the proxy adapter", "properties": {} },
+        "prePipeline": { "$ref": "#/definitions/pipeline" },
+        "postPipeline": { "$ref": "#/definitions/pipeline" }
     },
     "required": [ "name", "source", "basePath", "access" ]
 };
 
 export const schemaIChordServiceConfig = {
+    "$id": "https://restspace.io/chords/chordServiceConfig",
     "type": "object",
+    "definitions": { ...schemaIServiceConfig.definitions },
     "properties": {
         ...schemaIServiceConfig.properties
     },
     "required": [ "name", "source", "basePath" ]
 };
 
-export const schemaIServiceConfigExposedProperties = [ "name", "source", "basePath", "access", "caching", "adapterSource" ]; 
+export const schemaIServiceConfigExposedProperties = [ "name", "source", "basePath", "access", "caching", "adapterSource", "prePipeline", "postPipeline" ]; 

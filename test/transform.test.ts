@@ -272,6 +272,29 @@ Deno.test('list flatten', function () {
     assertEquals(output.x, [1, 10, 100, 2, 20, 200, 3, 30, 300]);
 });
 
+Deno.test('inner loop index', function () {
+    const input = {
+        list: [
+            {
+                val: [ { a:1 }, { a:10 }, { a:100 } ]
+            },
+            {
+                val: [ { a:2 }, { a:20 }, { a:200 } ]
+            },
+            {
+                val: [ { a:3 }, { a:30 }, { a:300 } ]
+            }
+        ],
+        x:[]
+    };
+    const transform = {
+        "$this": "$this",
+        "list[item].val[subitem]": "outer.x.push(subitem)"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.x, [1, 10, 100, 2, 20, 200, 3, 30, 300]);
+});
+
 Deno.test('avoid output multiple paths pointing to same data', function () {
     const input = {
         a: [ 1, 2, 3 ]

@@ -14,8 +14,16 @@ export const pipelineSchema = {
     }
 };
 
-export const pipelineValidate = new Ajv().compile(Object.assign({
+export const pipelineValidate = new Ajv({ strictSchema: false, allowUnionTypes: true }).compile(Object.assign({
     definitions: {
         pipeline: pipelineSchema
     }
 }, pipelineSchema));
+
+export const pipelineConcat = (pipeline0?: PipelineSpec, pipeline1?: PipelineSpec) => {
+    if (pipeline0 || pipeline1) {
+        return (pipeline0 || []).concat(pipeline1 || []);
+    } else {
+        return undefined;
+    }
+}
