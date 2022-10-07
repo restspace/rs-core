@@ -45,6 +45,37 @@ export async function* toBlockChunks(stringItbl: AsyncIterable<string>) {
     yield buffer.slice(0, pointer);
 }
 
+export async function* toLines(stringItbl: AsyncIterable<string>) {
+    const iterator = stringItbl[Symbol.asyncIterator]();
+    let {value: chunk, done: readerDone} = await iterator.next()
+  
+    const re = /\r\n|\n|\r/gm;
+    let startIndex = 0;
+  
+    for (;;) {
+      const result = re.exec(chunk);
+      if (!result) {
+        if (readerDone) {
+          break;
+        }
+        const remainder = chunk.substr(startIndex);
+        const nextResult = await iterator.next();
+        chunk = nextResult.value;
+        readerDone = nextResult.done;
+        
+        chunk = remainder + (chunk || "");
+        startIndex = re.lastIndex = 0;
+        continue;
+      }
+      yield chunk.substring(startIndex, result.index);
+      startIndex = re.lastIndex;
+    }
+    if (startIndex < chunk.length) {
+      // last line didn't end in a newline char
+      yield chunk.substr(startIndex);
+    }
+  }
+
 // local copy of std library iterateReader which allocates a new buffer
 // for each block to avoid async overwrites of a shared buffer
 export async function* iterateReader(

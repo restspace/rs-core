@@ -54,8 +54,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
         this.updateState();
     }
 
-    private updateState(closeRequested: boolean = false) {
-        const initState = this._state;
+    private updateState(closeRequested = false) {
         if (this._state === "running"
             && (this.maxPassed && this._nPassed >= this.maxPassed || closeRequested)) {
             this.emitter.emit('statechange', 'no-enqueue');
