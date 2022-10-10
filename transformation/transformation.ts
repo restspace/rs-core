@@ -103,7 +103,8 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
             return Object.assign({}, val0, val1);
         },
         parseInt: (s: string, radix?: number) => parseInt(s, radix),
-        parseFloat: (s: string) => parseFloat(s)
+        parseFloat: (s: string) => parseFloat(s),
+        uuid: () => crypto.randomUUID()
     }
 
     if (typeof transformObject === 'string') {
@@ -148,7 +149,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         output[effectiveKey] = shallowCopy(transformation(subTransform, input, url));
     } else if (match === '.') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
-        if (!(keyPart in input)) return;
+        if (keyStart === 0 && !(keyPart in input)) return;
         if (!(keyPart in output)) {
             output[keyPart] = {};
         } else {

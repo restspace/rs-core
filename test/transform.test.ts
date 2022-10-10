@@ -99,6 +99,26 @@ Deno.test('path key', function () {
     assertEquals(output.b.y, "pqr");
 });
 
+Deno.test('path key lvl 2', function () {
+    const input = {
+        a: "xyz",
+        b: {
+            x: {
+                p: "mno",
+                q: 123
+            },
+            y: "pqr"
+        }
+    };
+    const transform = {
+        "$this": "$this",
+        "b.x.p": "b.x.q"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.b.x.p, 123);
+    assertEquals(output.b.y, "pqr");
+});
+
 Deno.test('path array', function () {
     const input = {
         a: "xyz",
@@ -180,7 +200,6 @@ Deno.test('path array loop over objects', function () {
     const output = transformation(transform, input);
     assertEquals(output.c, [ { a: 1 }, { a: 3 }, { a: 5 } ]);
 });
-
 
 Deno.test('filter path array loop over objects', function () {
     const input = {
