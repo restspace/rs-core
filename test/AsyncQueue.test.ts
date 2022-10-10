@@ -260,6 +260,17 @@ Deno.test('flatmaps async', async function() {
         check += 2;
     }
 });
+Deno.test('flatmaps mixed sync async', async function() {
+    const asq = new AsyncQueue<number>(2);
+    asq.enqueue(0);
+    setTimeout(() => asq.enqueue(1), 50);
+    let check = 2;
+    for await (const pull of asq.flatMap(item =>
+        new Promise((resolve) => item === 1 ? setTimeout(() => resolve(item * 2), 200) : Promise.resolve(0)))) {
+        assertStrictEquals(pull, check);
+        check -= 2;
+    }
+});
 Deno.test('flatmaps async close', async function() {
     const asq = new AsyncQueue<number>();
     asq.enqueue(0);

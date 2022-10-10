@@ -1,4 +1,4 @@
-import { assertEquals, assertThrows } from "std/testing/asserts.ts";
+import { assert, assertEquals, assertThrows } from "std/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
 
 Deno.test('single var', function () {
@@ -112,10 +112,12 @@ Deno.test('path key lvl 2', function () {
     };
     const transform = {
         "$this": "$this",
-        "b.x.p": "b.x.q"
+        "b.x.p": "b.x.q",
+        "b.x.q": "undefined"
     };
     const output = transformation(transform, input);
     assertEquals(output.b.x.p, 123);
+    assert(output.b.x.q === undefined);
     assertEquals(output.b.y, "pqr");
 });
 

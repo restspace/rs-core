@@ -204,7 +204,6 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
     // of a function passed in to their outputs
     flatMap(mapper: (item: T) => T | AsyncQueue<T> | Promise<T | AsyncQueue<T>> | Error | null | undefined): AsyncQueue<T> {
         const newAsq = new AsyncQueue<T>();
-        let nAwaiting = 0;
         const getResultsAsync = async () => {
             try
             {
@@ -212,22 +211,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
                     let res: T | AsyncQueue<T> | Promise<T | AsyncQueue<T>> | Error | null | undefined;
                     try {
                         res = mapper(item);
-                        // don't wait for promises to resolve, but only close when all are
-                        // resolved
-                        if (res instanceof Promise) {
-                            nAwaiting++;
-                            res.then(res2 => {
-                                if (res2 !== undefined) newAsq.enqueue(res2);
-                                nAwaiting--;
-                                if (nAwaiting <= 0) newAsq.close();
-                            }).catch(err => {
-                                newAsq.enqueue(err);
-                                nAwaiting--;
-                                if (nAwaiting <= 0) newAsq.close();
-                            });
-                        } else {
-                            if (res !== undefined) newAsq.enqueue(res);
-                        }
+                        if (res !== undefined) newAsq.enqueue(res);
                     } catch (err) {
                         newAsq.enqueue(err);
                     }
@@ -235,7 +219,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
             } catch (err) {
                 newAsq.enqueue(err);
             }
-            if (nAwaiting <= 0) newAsq.close();
+            newAsq.close();
         };
         getResultsAsync();
         return newAsq;
