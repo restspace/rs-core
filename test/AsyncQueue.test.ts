@@ -1,4 +1,4 @@
-import { assertStrictEquals } from "std/testing/asserts.ts";
+import { assert, assertStrictEquals } from "std/testing/asserts.ts";
 
 import { AsyncQueue } from '../utility/asyncQueue.ts';
 
@@ -264,12 +264,18 @@ Deno.test('flatmaps mixed sync async', async function() {
     const asq = new AsyncQueue<number>(2);
     asq.enqueue(0);
     setTimeout(() => asq.enqueue(1), 50);
-    let check = 2;
-    for await (const pull of asq.flatMap(item =>
-        new Promise((resolve) => item === 1 ? setTimeout(() => resolve(item * 2), 200) : Promise.resolve(0)))) {
+    let check = 0;
+    const asq2 = asq.flatMap(item =>
+        new Promise((resolve) => item === 1
+            ? setTimeout(() => resolve(item * 2), 200)
+            : resolve(0)));
+    for await (const pull of asq2) {
         assertStrictEquals(pull, check);
-        check -= 2;
+        console.log(pull);
+        check += 2;
     }
+    console.log('loop done');
+    assert(check > 2);
 });
 Deno.test('flatmaps async close', async function() {
     const asq = new AsyncQueue<number>();

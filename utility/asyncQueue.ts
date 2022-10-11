@@ -87,15 +87,13 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
             this._nAwaiting++;
             value
                 .then(res => {
-                    this.innerEnqueue(res, false, true);
                     this._nAwaiting--;
-                    this.updateState();
+                    this.innerEnqueue(res, false, true);
                 })
                 .catch(reason => {
                     if (!(reason instanceof Error)) reason = new Error(reason.toString());
-                    this.innerEnqueue(reason as Error, false, true);
                     this._nAwaiting--;
-                    this.updateState();
+                    this.innerEnqueue(reason as Error, false, true);
                 });
         } else {
             this.innerEnqueue(value, false);
