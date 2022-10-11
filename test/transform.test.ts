@@ -310,7 +310,7 @@ Deno.test('inner loop index', function () {
     };
     const transform = {
         "$this": "$this",
-        "list[item].val[subitem]": "outer.x.push(subitem)"
+        "list[item].val[subitem]": "outer.x.push(subitem.value.a)"
     };
     const output = transformation(transform, input);
     assertEquals(output.x, [1, 10, 100, 2, 20, 200, 3, 30, 300]);

@@ -55,6 +55,8 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
     }
 
     private updateState(closeRequested = false) {
+        if (this._qid == 9999) console.log(`state change qid ${this._qid} maxp ${this.maxPassed} starts ${this._state} nAwaiting ${this._nAwaiting} nPassed ${this._nPassed} nChild ${this._nActiveChildren} close req ${closeRequested}`);
+
         if (this._state === "running"
             && (this.maxPassed && this._nPassed >= this.maxPassed || closeRequested)) {
             this.emitter.emit('statechange', 'no-enqueue');
@@ -87,13 +89,16 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
             this._nAwaiting++;
             value
                 .then(res => {
-                    this._nAwaiting--;
                     this.innerEnqueue(res, false, true);
+                    this._nAwaiting--;
+                    this.updateState();
+                    if (this._qid == 9999) console.log(`enqueue promise qid ${this._qid} maxp ${this.maxPassed}, after nAwaiting: ${this._nAwaiting}, state: ${this._state}`);
                 })
                 .catch(reason => {
                     if (!(reason instanceof Error)) reason = new Error(reason.toString());
-                    this._nAwaiting--;
                     this.innerEnqueue(reason as Error, false, true);
+                    this._nAwaiting--;
+                    this.updateState();
                 });
         } else {
             this.innerEnqueue(value, false);
@@ -103,7 +108,11 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
 
     private innerEnqueue(value: T | Error | null | AsyncQueue<T>, fromChild: boolean, fromPromise?: boolean) {
         const allowedNoenqueue = this._state == "no-enqueue" && (fromChild || fromPromise);
+        if (allowedNoenqueue) {
+            if (this._qid == 9999) console.log(`Allowed no-enqueue, qid: ${this._qid} maxp: ${this.maxPassed} state: ${this._state}, fromChild: ${fromChild}, fromPromise: ${fromPromise} nChild ${this._nActiveChildren} nAwaiting ${this._nAwaiting}`);
+        }
         if (this._state !== "running" && !allowedNoenqueue) {
+            if (this._qid == 9999) console.log(`Illegal enqueue, qid: ${this._qid} maxp: ${this.maxPassed} state: ${this._state}, fromChild: ${fromChild}, fromPromise: ${fromPromise}`);
             throw new Error('Illegal internal enqueue after closed');
         }
 
