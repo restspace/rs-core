@@ -18,7 +18,9 @@ interface ResolveReject<T> {
 
 type AsyncQueueState = "running" | "no-enqueue" | "all-enqueued" | "closed";
 
-type AsyncQueueEvent<T> = { statechange( state: string ): any, enqueue(value: T | Error | null | AsyncQueue<T>): any };
+type QueueArgs<T> = T | AsyncQueue<T> | Error | null | undefined;
+
+type AsyncQueueEvent<T> = { statechange( state: string ): any, enqueue(value: QueueArgs<T>): any };
 
 /**
  * An AsyncQueue is an async iterator where calling next() for the next iteration returns a promise. The promise returns an enqueued
@@ -80,7 +82,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
         return this;
     }
 
-    enqueue(value: T | Error | null | Promise<T | AsyncQueue<T>> | AsyncQueue<T>): AsyncQueue<T> {
+    enqueue(value: QueueArgs<T> | Promise<QueueArgs<T>>): AsyncQueue<T> {
         if (this._state !== "running") {
             throw new Error('Closed');
         }
@@ -106,7 +108,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
         return this;
     }
 
-    private innerEnqueue(value: T | Error | null | AsyncQueue<T>, fromChild: boolean, fromPromise?: boolean) {
+    private innerEnqueue(value: QueueArgs<T>, fromChild: boolean, fromPromise?: boolean) {
         const allowedNoenqueue = this._state == "no-enqueue" && (fromChild || fromPromise);
         if (allowedNoenqueue) {
             if (this._qid == 9999) console.log(`Allowed no-enqueue, qid: ${this._qid} maxp: ${this.maxPassed} state: ${this._state}, fromChild: ${fromChild}, fromPromise: ${fromPromise} nChild ${this._nActiveChildren} nAwaiting ${this._nAwaiting}`);
@@ -120,7 +122,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
             if (fromChild) return; // don't re-enqueue AsyncQueues queued on children
             this.attachSubqueue(value);
         } else {
-            if (value !== null) { // null means reduce count but don't actually enqueue anything
+            if (value !== null && value !== undefined) { // null means reduce count but don't actually enqueue anything
                 if (this._settlers.length > 0) {
                     if (this._values.length > 0) {
                         throw new Error('Illegal internal state');
@@ -209,13 +211,13 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
 
     // returns an asyncqueue which is will return the outputs of the asyncqueue passed in after application
     // of a function passed in to their outputs
-    flatMap(mapper: (item: T) => T | AsyncQueue<T> | Promise<T | AsyncQueue<T>> | Error | null | undefined): AsyncQueue<T> {
+    flatMap(mapper: (item: T) => QueueArgs<T> | Promise<QueueArgs<T>>): AsyncQueue<T> {
         const newAsq = new AsyncQueue<T>();
         const getResultsAsync = async () => {
             try
             {
                 for await (const item of this) {
-                    let res: T | AsyncQueue<T> | Promise<T | AsyncQueue<T>> | Error | null | undefined;
+                    let res: QueueArgs<T> | Promise<QueueArgs<T>>;
                     try {
                         res = mapper(item);
                         if (res !== undefined) newAsq.enqueue(res);

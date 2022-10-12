@@ -6,12 +6,12 @@ import { PipelineSpec } from "./PipelineSpec.ts";
 import { Url } from "./Url.ts";
 import * as log from "std/log/mod.ts";
 import { StateFunction } from "../rs-runtime/tenant.ts";
-import { Externality } from "../rs-runtime/pipeline/pipelineStep.ts";
+import { Source } from "./Source.ts";
 
 export interface SimpleServiceContext {
     tenant: string;
     prePost?: PrePost;
-    makeRequest: (msg: Message, externality?: Externality) => Promise<Message>;
+    makeRequest: (msg: Message, source?: Source) => Promise<Message>;
     runPipeline: (msg: Message, pipelineSpec: PipelineSpec, contextUrl?: Url, concurrencyLimit?: number) => Promise<Message>;
     logger: log.Logger;
     manifest: IServiceManifest;
