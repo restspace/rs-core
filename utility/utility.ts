@@ -191,13 +191,29 @@ export function mergeDeep(target: any, ...sources: Record<string, any>[]): any {
     return mergeDeep(target, ...sources);
 }
 
+const strategies = [ 'replace', 'append', 'prepend', 'positional', 'id-replace', 'id-patch' ];
+
+function removePatchConfig(patchData: any): any {
+    if (Array.isArray(patchData)) {
+        if (typeof patchData[0] === 'object' && '$strategy' in patchData[0] && strategies.includes(patchData[0].$strategy)) {
+            patchData.shift();
+        }
+        
+        return patchData.map((item: any) => removePatchConfig(item));
+    } else if (typeof patchData === 'object') {
+        return Object.fromEntries(
+            Object.entries(patchData).map(([k, v]) => [ k, removePatchConfig(v) ]));
+    } else {
+        return patchData;
+    }
+}
+
 export function patch(target: any, patchData: any) {
     if (Array.isArray(patchData)) {
-        if (!Array.isArray(target)) return patchData;
+        if (!Array.isArray(target)) return removePatchConfig(patchData);
         let strategy = "positional";
         let id = "";
         if (patchData[0]) {
-            const strategies = [ 'replace', 'append', 'prepend', 'positional', 'id-replace', 'id-patch' ];
             let config: any = null;
             if (typeof patchData[0] === 'object' && '$strategy' in patchData[0] && strategies.includes(patchData[0].$strategy)) {
                 strategy = patchData[0].$strategy;
@@ -214,18 +230,18 @@ export function patch(target: any, patchData: any) {
                     if (idx < target.length) {
                         target[idx] = patch(target[idx], patchData[idx]);
                     } else {
-                        target.push(patch(target[idx], patchData[idx]));
+                        target.push(removePatchConfig(patchData[idx]));
                     }
                 }
                 return target;
             case 'replace':
-                return [ ...patchData ];
+                return [ ...removePatchConfig(patchData) ];
             case 'append':
-                patchData.forEach(val => target.push(val));
+                patchData.forEach(val => target.push(removePatchConfig(val)));
                 return target;
             case 'prepend': {
                 for (let idx = patchData.length - 1; idx >= 0; idx--) {
-                    target.unshift(patchData[idx]);
+                    target.unshift(removePatchConfig(patchData[idx]));
                 }
                 return target;
             }
@@ -237,7 +253,7 @@ export function patch(target: any, patchData: any) {
                         if (targetItem) {
                             newList.push(patch(targetItem, val));
                         } else {
-                            newList.push(val);
+                            newList.push(removePatchConfig(val));
                         }
                     }
                 });
@@ -251,7 +267,7 @@ export function patch(target: any, patchData: any) {
                         if (targetIdx >= 0) {
                             newList[targetIdx] = patch(newList[targetIdx], val);
                         } else {
-                            newList.push(val);
+                            newList.push(removePatchConfig(val));
                         }
                     }
                 });
@@ -259,7 +275,7 @@ export function patch(target: any, patchData: any) {
             }
         }
     } else if (typeof patchData === "object") {
-        if (Array.isArray(target) || !(typeof target === "object")) return patchData;
+        if (Array.isArray(target) || !(typeof target === "object")) return removePatchConfig(patchData);
         for (const prop in patchData) {
             if (target[prop]) {
                 if (patchData[prop] === undefined) {
@@ -268,12 +284,12 @@ export function patch(target: any, patchData: any) {
                     target[prop] = patch(target[prop], patchData[prop]);
                 }
             } else {
-                target[prop] = patchData[prop];
+                target[prop] = removePatchConfig(patchData[prop]);
             }
         }
         return target;
     } else {
-        return patchData;
+        return removePatchConfig(patchData);
     }
 }
 

@@ -1,8 +1,10 @@
-import { assertEquals, assertStrictEquals, assertThrows } from "std/testing/asserts.ts";
+import { assert, assertEquals, assertStrictEquals, assertThrows } from "std/testing/asserts.ts";
 import { getProp, setProp, deleteProp, patch } from '../utility/utility.ts';
 
 Deno.test('getProp from null', function () {
-    assertThrows(() => v = getProp(null, "abc"));
+    assertThrows(() => {
+        const v = getProp(null, "abc");
+    });
 });
 Deno.test('getProp string', function () {
     const v = getProp({ a: [ 'x', 'y', 'z' ] }, "a.1");
@@ -13,7 +15,7 @@ Deno.test('getProp array', function () {
     assertStrictEquals(v, 1);
 });
 Deno.test('setProp empty', function () {
-    const v = {}
+    const v = {} as any;
     setProp(v, [ '0', 'a' ], 'hello');
     assertStrictEquals(v[0].a, 'hello');
 });
@@ -85,6 +87,19 @@ Deno.test('patch list id-patch', function() {
     const patchData = [ { '$strategy': 'id-patch', '$id': 'name' }, { name: 'b', val: 'bbb' }, { name: 'c', val: 'ccc' } ];
     const patched = patch(targ, patchData);
     assertEquals(patched, [ { name: 'a', val: 'xxx' }, { name: 'b', val: 'bbb' }, { name: 'c', val: 'ccc' } ]);
+});
+Deno.test('patch list add list with patch config', function() {
+    const targ = [
+        { name: 'a', val: [ 'xxx', 'yyy' ] },
+        { name: 'b', val: [ 'ppp', 'qqq' ] }
+    ];
+    const patchData = [
+        { '$strategy': 'id-replace', '$id': 'name' },
+        { name: 'b', val: [ 'bbb' ] },
+        { name: 'c', val: [ { '$strategy': 'replace' }, 'nnn' ] }
+    ];
+    const patched = patch(targ, patchData);
+    assertEquals(patched[1].val[0], 'nnn');
 });
 
 
