@@ -316,6 +316,18 @@ Deno.test('inner loop index', function () {
     assertEquals(output.x, [1, 10, 100, 2, 20, 200, 3, 30, 300]);
 });
 
+Deno.test('index non list', function () {
+    const input = {
+        notAList: "abc"
+    };
+    const transform = {
+        "$this": "$this",
+        "notAList[item]": "val"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.notAList, "abc");
+});
+
 Deno.test('avoid output multiple paths pointing to same data', function () {
     const input = {
         a: [ 1, 2, 3 ]

@@ -188,12 +188,16 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
             let list = newOutput;
 
             if (!Array.isArray(newOutput)) {
-                list = Object.entries(newOutput).map(([k, v]) => (
-                    typeof v === 'object'
-                    ? { ...(v as any), "$key": k }
-                    : v
-                  ));
-                for (const k in newOutput) delete newOutput[k];
+                if (typeof newOutput === 'object') {
+                    list = Object.entries(newOutput).map(([k, v]) => (
+                        typeof v === 'object'
+                        ? { ...(v as any), "$key": k }
+                        : v
+                    ));
+                    for (const k in newOutput) delete newOutput[k];
+                } else {
+                    return;
+                }
             }
 
             const loopItem = {} as Record<string, unknown>;
