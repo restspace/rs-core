@@ -43,6 +43,10 @@ Deno.test('matches a terminal array correctly', function() {
     const res = resolvePathPatternWithObject("a/b/${prop[]}", { prop: [ 'cde', 'fgh' ] }, [], '');
     assertEquals(res, [ 'a/b/cde', 'a/b/fgh' ]);
 });
+Deno.test('matches an empty terminal array correctly', function() {
+    const res = resolvePathPatternWithObject("a/b/${prop[]}", { prop: [ ] }, [], '');
+    assertEquals(res, [ ]);
+});
 Deno.test('matches a non-terminal array correctly', function() {
     const res = resolvePathPatternWithObject("a/b/${prop[].inner}", { prop: [ { q: 1, inner: 'xxx' }, { q: 2, inner: 'yyy' } ] }, [], '');
     assertEquals(res, [ 'a/b/xxx', 'a/b/yyy' ]);

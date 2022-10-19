@@ -44,7 +44,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
     private emitter = new EventEmitter<AsyncQueueEvent<T>>();
 
     get nRemaining() {
-        return this.maxPassed ? this.maxPassed - this._nPassed : 1;
+        return this.maxPassed !== undefined ? this.maxPassed - this._nPassed : 1;
     }
 
     constructor(public maxPassed?: number) {
@@ -60,7 +60,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
         if (this._qid == 9999) console.log(`state change qid ${this._qid} maxp ${this.maxPassed} starts ${this._state} nAwaiting ${this._nAwaiting} nPassed ${this._nPassed} nChild ${this._nActiveChildren} close req ${closeRequested}`);
 
         if (this._state === "running"
-            && (this.maxPassed && this._nPassed >= this.maxPassed || closeRequested)) {
+            && (this.maxPassed !== undefined && this._nPassed >= this.maxPassed || closeRequested)) {
             this.emitter.emit('statechange', 'no-enqueue');
             this._state = "no-enqueue";
         }

@@ -329,6 +329,9 @@ export class Message {
         return undefined;
     }
 
+    /** Allows a service to set a redirect to be used later in a pipeline
+     *  specifically, in the pre-pipeline before a service is invoked
+     */
     setServiceRedirect(servicePath: string) {
         this.setHeader('X-Restspace-Service-Redirect', servicePath);
     }
@@ -336,6 +339,7 @@ export class Message {
         const redir = this.getHeader('X-Restspace-Service-Redirect')
         return redir;
     }
+    /** Apply the service redirect set by an earlier service */
     applyServiceRedirect() {
         const redirServicePath = this.getServiceRedirect();
         if (redirServicePath) this.url.servicePath = redirServicePath;

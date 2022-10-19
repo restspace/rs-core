@@ -41,6 +41,11 @@ Deno.test('max queued', async function() {
     res = await asq.next();
     assertStrictEquals(res.done, true);
 });
+Deno.test('max queued zero', async function() {
+    const asq = new AsyncQueue<number>(0);
+    const res = await asq.next();
+    assertStrictEquals(res.done, true);
+});
 Deno.test('max queued with nulls', async function() {
     const asq = new AsyncQueue<number>(2);
     asq.enqueue(0);
