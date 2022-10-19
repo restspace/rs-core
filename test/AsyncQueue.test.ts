@@ -296,3 +296,19 @@ Deno.test('flatmaps async close', async function() {
         check += 2;
     }
 });
+Deno.test('fromPromises', async function() {
+    const asq = AsyncQueue.fromPromises(
+        new Promise<number>(res => setTimeout(() => res(5), 20))
+    );
+    for await (const pull of asq) {
+        assertStrictEquals(pull, 5);
+    }
+});
+Deno.test('fromPromises, fails', async function() {
+    const asq = AsyncQueue.fromPromises(
+        new Promise<number | null>(res => setTimeout(() => res(null), 20))
+    );
+    for await (const pull of asq) {
+        assert(false);
+    }
+});

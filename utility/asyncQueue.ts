@@ -235,12 +235,19 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
     }
 
     static fromPromises<T>(...promises: Promise<T | null | undefined>[]): AsyncQueue<T> {
-        const asq = new AsyncQueue<T>(promises.length);
+        const asq = new AsyncQueue<T>();
+        let nUnresolved = promises.length;
         promises.forEach(promise => promise
             .then(val => {
                 if (val !== null && val !== undefined) asq.enqueue(val);
+                nUnresolved--;
+                if (nUnresolved <= 0) asq.close();
             })
-            .catch(reason => asq.enqueue(reason)));
+            .catch(reason => {
+                asq.enqueue(reason);
+                nUnresolved--;
+                if (nUnresolved <= 0) asq.close();
+            }));
         return asq;
     }
 }
