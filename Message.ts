@@ -90,6 +90,7 @@ export class Message {
     externalUrl: Url | null = null;
     user: IAuthUser | null = null;
     websocket: WebSocket | null = null;
+    uid = crypto.randomUUID();
     protected _status = 0;
     protected _data?: MessageBody;
     protected uninitiatedDataCopies: MessageBody[] = [];
@@ -220,6 +221,7 @@ export class Message {
         msg.authenticated = this.authenticated;
         msg.internalPrivilege = this.internalPrivilege;
         msg.user = this.user;
+        msg.uid = this.uid;
         return msg.setStatus(this.status);
     }
 
