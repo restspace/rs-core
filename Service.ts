@@ -11,7 +11,7 @@ import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
 import { after } from "./utility/utility.ts";
 
 export type ServiceFunction<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> =
-    (msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => Promise<Message>;
+    (msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => Message | Promise<Message>;
 
 export enum AuthorizationType {
     none, read, write, create
@@ -87,7 +87,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
             msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => {
             msg.url.basePathElements = msg.url.basePathElements.concat(matchPathElements);
             const enhancedContext = this.enhanceContext(context, config);
-            return methodFunc(msg, enhancedContext, config);
+            return Promise.resolve(methodFunc(msg, enhancedContext, config));
         }
 
         if (method === 'options') return Promise.resolve(msg);
