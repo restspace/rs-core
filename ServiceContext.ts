@@ -19,6 +19,8 @@ export interface SimpleServiceContext {
     makeProxyRequest?: (msg: Message) => Promise<Message>;
     state: StateFunction;
     metadataOnly?: boolean;
+    traceparent?: string; // standard tracing header
+    tracestate?: string; // standard tracing header
 }
 
 export interface ServiceContext<TAdapter extends IAdapter> extends SimpleServiceContext {

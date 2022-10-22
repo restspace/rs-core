@@ -90,7 +90,6 @@ export class Message {
     externalUrl: Url | null = null;
     user: IAuthUser | null = null;
     websocket: WebSocket | null = null;
-    uid = crypto.randomUUID();
     protected _status = 0;
     protected _data?: MessageBody;
     protected uninitiatedDataCopies: MessageBody[] = [];
@@ -186,7 +185,7 @@ export class Message {
     //     }
     // }
 
-    constructor(url: Url | string, public tenant: string, public method: MessageMethod = "GET", headers?: Headers | { [key:string]: string | string[] }, data?: MessageBody) {
+    constructor(url: Url | string, public tenant: string, public method: MessageMethod = "GET", parent: Message | null, headers?: Headers | { [key:string]: string | string[] }, data?: MessageBody) {
         this.url = (typeof url === 'string') ? new Url(url) : url;
         this.data = data;
         if (headers) {
@@ -201,8 +200,18 @@ export class Message {
         if (this.getHeader("x-forwarded-proto")) {
             this.url.scheme = this.getHeader("x-forwarded-proto") + '://';
         }
-        // fill missing info on body from headers
-        //if (data) this.setMetadataFromHeaders(data);
+
+        //inherit tracing from parent or set up
+
+        if (parent === null) {
+            const traceId = crypto.randomUUID().replace('-', '');
+            const spanId = crypto.randomUUID().replace('-', '').substring(0, 16);
+            this.setHeader('traceparent', `00-${traceId}-${spanId}-00`);
+        } else {
+            this.setHeader('traceparent', parent.getHeader('traceparent'));
+            const tracestate = parent.getHeader('tracestate');
+            if (tracestate) this.setHeader('tracestate', tracestate);
+        }
 
         const cookieStrings = ((this.headers['cookie'] as string) || '').split(';');
         this.cookies = cookieStrings ? cookieStrings.reduce((res, cookieString) => {
@@ -213,7 +222,7 @@ export class Message {
     }
 
     copy(withData = true): Message {
-        const msg = new Message(this.url.copy(), this.tenant, this.method,
+        const msg = new Message(this.url.copy(), this.tenant, this.method, this,
             { ...this._headers }, withData ? this.data : undefined);
         msg.externalUrl = this.externalUrl ? this.externalUrl.copy() : null;
         msg.depth = this.depth;
@@ -221,7 +230,6 @@ export class Message {
         msg.authenticated = this.authenticated;
         msg.internalPrivilege = this.internalPrivilege;
         msg.user = this.user;
-        msg.uid = this.uid;
         return msg.setStatus(this.status);
     }
 
@@ -478,7 +486,16 @@ export class Message {
         return this;
     }
 
-
+    startSpan(traceparent?: string, tracestate?: string) {
+        if (!traceparent) traceparent = this.getHeader('traceparent');
+        if (traceparent) {
+            const traceParts = traceparent.split('-');
+            const newSpanId = crypto.randomUUID().replace('-', '').substring(0, 16);
+            this.setHeader('traceparent', `${traceParts[0]}-${traceParts[1]}-${newSpanId}-00`);
+            if (tracestate) this.setHeader('tracestate', tracestate);
+        }
+        return this;
+    }
 
     async requestExternal(): Promise<Message> {
         let resp: Response;
@@ -589,15 +606,27 @@ export class Message {
 
     static fromRequest(req: Request, tenant: string) {
         const url = new Url(req.url);
-        return new Message(url, tenant, req.method as MessageMethod, req.headers, MessageBody.fromRequest(req) || undefined);
+        const msg = new Message(url, tenant, req.method as MessageMethod, null, req.headers, MessageBody.fromRequest(req) || undefined);
+        const traceparent = req.headers.get('traceparent');
+        if (traceparent) {
+            msg.setHeader('traceparent', traceparent);
+            const tracestate = req.headers.get('tracestate');
+            if (tracestate) msg.setHeader('tracestate', tracestate);
+        }
     }
  
     static fromResponse(resp: Response, tenant: string) {
-        const msg = new Message(resp.url, tenant, "", resp.headers,
+        const msg = new Message(resp.url, tenant, "", null, resp.headers,
             resp.body
                 ? new MessageBody(resp.body, resp.headers.get('content-type') || 'text/plain')
                 : undefined);
         msg.setStatus(resp.status);
+        const traceparent = resp.headers.get('traceparent');
+        if (traceparent) {
+            msg.setHeader('traceparent', traceparent);
+            const tracestate = resp.headers.get('tracestate');
+            if (tracestate) msg.setHeader('tracestate', tracestate);
+        }
         return msg;
     }
 
@@ -616,12 +645,12 @@ export class Message {
             const lastPart = after(line, ' ');
             const statusStr = upTo(lastPart, ' ');
             const statusMsg = after(lastPart, ' ');
-            msg = new Message("/", tenant, "");
+            msg = new Message("/", tenant, "", null);
             msg.setStatus(parseInt(statusStr), statusMsg || undefined);
         } else {
             const firstPart = upToLast(line, ' ');
             const url = after(firstPart, ' ');
-            msg = new Message(url, tenant, initial as MessageMethod);
+            msg = new Message(url, tenant, initial as MessageMethod, null);
         }
         while (line) {
             [line, pos] = pullString(arr, pos);
@@ -677,10 +706,10 @@ export class Message {
             const refUrl = referenceUrl || new Url('/');
             const urls = resolvePathPatternWithUrl(url, refUrl, data, name);
             if (Array.isArray(urls)) {
-                return urls.map((url) => new Message(Url.inheritingBase(referenceUrl, url), tenant, method, { ...headers }, postData ? MessageBody.fromObject(postData) : undefined));
+                return urls.map((url) => new Message(Url.inheritingBase(referenceUrl, url), tenant, method, null, { ...headers }, postData ? MessageBody.fromObject(postData) : undefined));
             }
             url = urls;
         }
-        return new Message(Url.inheritingBase(referenceUrl, url), tenant, method, { ...headers }, postData ? MessageBody.fromObject(postData) : undefined);
+        return new Message(Url.inheritingBase(referenceUrl, url), tenant, method, null, { ...headers }, postData ? MessageBody.fromObject(postData) : undefined);
     }
 }

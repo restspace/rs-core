@@ -137,7 +137,8 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 		const transformedUrl = applyMapUrl(mapUrlDirectoryRead, msg, config);
 		if (transformedUrl instanceof Message) return transformedUrl;
 		const [ url, method ] = transformedUrl;
-		const reqMsg = new Message(url, context.tenant, method);
+		const reqMsg = new Message(url, context.tenant, method, msg);
+		reqMsg.startSpan();
 		const dirResp = await context.makeProxyRequest!(reqMsg);
 
 		const dirJson = await applyTransform(transformDirectory, dirResp, config) as DirDescriptor | Message;
@@ -180,7 +181,8 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 		const mappedUrl = applyMapUrl(mapUrl, msg, config, createTest, mapUrlCreate);
 		if (mappedUrl instanceof Message) return mappedUrl;
 		const [ url, method ] = mappedUrl;
-		const reqMsg = new Message(url, context.tenant, method);
+		const reqMsg = new Message(url, context.tenant, method, msg);
+		reqMsg.startSpan();
 		if (msg.method === "PUT" || msg.method === "POST") {
 			if (!msg.data) return msg.setStatus(400, "No body in write operation");
 			if (transformWrite) {

@@ -65,8 +65,8 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         });
     }
 
-    /** Add custom updates to the ServiceContext which require the config to be available */
-    enhanceContext(context: ServiceContext<TAdapter>, config: TConfig): ServiceContext<TAdapter> {
+    /** Add custom updates to the ServiceContext which require the config or message headers to be available */
+    enhanceContext(context: ServiceContext<TAdapter>, config: TConfig, msg?: Message): ServiceContext<TAdapter> {
         const proxyAdapterSource = context.manifest.proxyAdapterSource;
         if (proxyAdapterSource) {
             context.makeProxyRequest = async (msg: Message) => {
@@ -75,6 +75,8 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
                 return await context.makeRequest(proxyMsg);
             };
         }
+        context.traceparent = msg?.getHeader('traceparent') || undefined;
+        context.tracestate = msg?.getHeader('tracestate') || undefined;
         return context;
     }
 
@@ -86,7 +88,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         const callMethodFunc = ([ matchPathElements, methodFunc ]: [ string[], ServiceFunction<TAdapter, TConfig> ],
             msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => {
             msg.url.basePathElements = msg.url.basePathElements.concat(matchPathElements);
-            const enhancedContext = this.enhanceContext(context, config);
+            const enhancedContext = this.enhanceContext(context, config, msg);
             return Promise.resolve(methodFunc(msg, enhancedContext, config));
         }
 
