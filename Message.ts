@@ -204,13 +204,16 @@ export class Message {
         //inherit tracing from parent or set up
 
         if (parent === null) {
-            const traceId = crypto.randomUUID().replace('-', '');
-            const spanId = crypto.randomUUID().replace('-', '').substring(0, 16);
+            const traceId = crypto.randomUUID().replace(/-/g, '');
+            const spanId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
             this.setHeader('traceparent', `00-${traceId}-${spanId}-00`);
         } else {
-            this.setHeader('traceparent', parent.getHeader('traceparent'));
-            const tracestate = parent.getHeader('tracestate');
-            if (tracestate) this.setHeader('tracestate', tracestate);
+            const traceparent = parent.getHeader('traceparent');
+            if (traceparent) {
+                this.setHeader('traceparent', traceparent);
+                const tracestate = parent.getHeader('tracestate');
+                if (tracestate) this.setHeader('tracestate', tracestate);
+            }
         }
 
         const cookieStrings = ((this.headers['cookie'] as string) || '').split(';');
@@ -490,11 +493,23 @@ export class Message {
         if (!traceparent) traceparent = this.getHeader('traceparent');
         if (traceparent) {
             const traceParts = traceparent.split('-');
-            const newSpanId = crypto.randomUUID().replace('-', '').substring(0, 16);
+            const newSpanId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
             this.setHeader('traceparent', `${traceParts[0]}-${traceParts[1]}-${newSpanId}-00`);
             if (tracestate) this.setHeader('tracestate', tracestate);
         }
         return this;
+    }
+
+    loggerArgs() {
+        let traceId = 'x'.repeat(32);
+        let spanId = 'x'.repeat(16);
+        const traceparent = this.getHeader('traceparent');
+        if (traceparent) {
+            const parts = traceparent.split('-');
+            traceId = parts[1];
+            spanId = parts[2];
+        }
+        return [ this.tenant, this.user?.email || '?', traceId, spanId ];
     }
 
     async requestExternal(): Promise<Message> {
@@ -613,6 +628,7 @@ export class Message {
             const tracestate = req.headers.get('tracestate');
             if (tracestate) msg.setHeader('tracestate', tracestate);
         }
+        return msg;
     }
  
     static fromResponse(resp: Response, tenant: string) {

@@ -8,6 +8,7 @@ export async function getUserFromEmail(context: SimpleServiceContext, userUrlPat
 
     const userUrl = resolvePathPatternWithObject(userUrlPattern, { email }, [], '', '') as string;
     const getUser = msg.copy().setMethod("GET").setUrl(userUrl);
+    getUser.startSpan();
 
     getUser.internalPrivilege = internalPrivilege;
     const fullUserMsg = await context.makeRequest(getUser);

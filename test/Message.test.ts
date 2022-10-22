@@ -2,7 +2,7 @@ import { Message } from "../Message.ts";
 import { assertEquals } from "std/testing/asserts.ts";
 
 Deno.test('GET encode/decode to array', async function () {
-    const msg = new Message("/abc", "test", "GET");
+    const msg = new Message("/abc", "test", "GET", null);
     msg.setHeader("X-Hdr", "abcdef");
     const ser = await msg.toUint8Array();
     const msgOut = Message.fromUint8Array(ser, "test");
@@ -12,7 +12,7 @@ Deno.test('GET encode/decode to array', async function () {
 });
 
 Deno.test('POST encode/decode to array', async function () {
-    const msg = new Message("/abc?x=y", "test", "POST");
+    const msg = new Message("/abc?x=y", "test", "POST", null);
     msg.setHeader("X-Hdr", "abcdef");
     msg.setDataJson({ "attr": "abc" });
     const ser = await msg.toUint8Array();
@@ -25,7 +25,7 @@ Deno.test('POST encode/decode to array', async function () {
 });
 
 Deno.test('response encode/decode to array', async function () {
-    const msg = new Message("/", "test", "");
+    const msg = new Message("/", "test", "", null);
     msg.setHeader("X-Hdr", "abcdef");
     msg.setDataJson({ "attr": "abc" });
     msg.setStatus(404, "Not found");
