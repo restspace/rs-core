@@ -101,6 +101,7 @@ export class Message {
         const headersOut = {
             ...this._headers
         };
+
         // enforce that headers appropriate to the payload are used
         if (this.data?.mimeType) {
             headersOut['content-type'] = this.data?.mimeType;
@@ -118,7 +119,8 @@ export class Message {
         return headersOut;
     }
     set headers(val: Record<string, string | string[]>) {
-        this._headers = val;
+        const valLowerCase = Object.fromEntries(Object.entries(val).map(([k, v]) => [ k.toLowerCase(), v ]));
+        this._headers = valLowerCase;
     }
 
     get data(): MessageBody | undefined {
@@ -190,9 +192,9 @@ export class Message {
         this.data = data;
         if (headers) {
             if (headers instanceof Headers) {
-                for (const [key, val] of headers.entries()) this._headers[key] = val;
+                for (const [key, val] of headers.entries()) this._headers[key.toLowerCase()] = val;
             } else {
-                this._headers = headers;
+                this.headers = headers;
             }
         }
         // handle forwards from reverse proxies which deal with https, we do the below
