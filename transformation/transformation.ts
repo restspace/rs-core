@@ -81,8 +81,8 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         //     (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
         // expressionGroup_expArgs: [1],
         // merge: (obj0: object, ...objs: object[]) => merge(obj0, ...objs),
-        pathPattern: (pattern: string) => 
-            resolvePathPatternWithUrl(pattern, url, data),
+        pathPattern: (pattern: string, decode?: boolean) => 
+            resolvePathPatternWithUrl(pattern, url, data, undefined, decode),
         newDate: (...args: any[]) => args.length === 0
             ? new Date()
             : (args.length === 1

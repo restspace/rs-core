@@ -1,5 +1,6 @@
 import { assertEquals } from "std/testing/asserts.ts";
-import { resolvePathPatternWithObject, resolvePathPattern } from '../PathPattern.ts';
+import { resolvePathPatternWithObject, resolvePathPattern, resolvePathPatternWithUrl } from '../PathPattern.ts';
+import { Url } from "../Url.ts";
 
 Deno.test('matches a single path el', function () {
     let res = resolvePathPattern("a/$>1/b", "/xyz/qqq/abc");
@@ -54,4 +55,11 @@ Deno.test('matches a non-terminal array correctly', function() {
 Deno.test('multiplies by multiple array props', function () {
     const res = resolvePathPatternWithObject("a/b/${prop[]}/c/${prop2[]}", { prop: [ 'n', 'm' ], prop2: [ 'x', 'y' ] }, [], '');
     assertEquals(res, [ 'a/b/n/c/x', 'a/b/n/c/y', 'a/b/m/c/x', 'a/b/m/c/y' ]);
+});
+Deno.test('decodes url segment', function () {
+    const url = new Url("/abc/def%2Fghi");
+    let res = resolvePathPatternWithUrl("$>1", url, undefined, undefined, true);
+    assertEquals(res, 'def/ghi');
+    res = resolvePathPatternWithUrl("$>1", url);
+    assertEquals(res, 'def%2Fghi');
 });
