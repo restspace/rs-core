@@ -273,6 +273,36 @@ export class Message {
         );
     }
 
+    private forbiddenHeaders = [
+        "accept-charset",
+        "accept-encoding",
+        "access-control-request-headers",
+        "access-control-request-method",
+        "connection",
+        "date",
+        "dnt",
+        "expect",
+        "feature-policy",
+        "host",
+        "keep-alive",
+        "origin",
+        "referer",
+        "te",
+        "trailer",
+        "transfer-encoding",
+        "upgrade",
+        "via"
+    ]
+
+    nonForbiddenHeaders() {
+        const isForbidden = (h: string) => this.forbiddenHeaders.includes(h)
+            || h.startsWith('proxy-')
+            || h.startsWith('sec-');
+
+        return Object.fromEntries(Object.entries(this.headers)
+            .filter(([k, _]) => !isForbidden(k)));
+    }
+
     responsify() {
         this.method = "";
         this.status = this.status || 200;
@@ -302,7 +332,7 @@ export class Message {
         }
         const req = new Request(this.url.toString(), {
             method: this.method,
-            headers: this.mapHeaders(this.headers, new Headers()),
+            headers: this.mapHeaders(this.nonForbiddenHeaders(), new Headers()),
             body: this.data?.data || undefined,
         });
         

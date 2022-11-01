@@ -42,7 +42,7 @@ const doEvaluate = (expression: string, context: any, helper: any) => {
     }
 }
 
-export const transformation = (transformObject: any, data: any, url: Url = new Url('/')): any => {
+export const transformation = (transformObject: any, data: any, url: Url = new Url('/'), name = ''): any => {
     /*
     {
         transfList: "transformMap(origList, { x: y + 1 })" // takes origList and applies transform object to map x to y + 1
@@ -52,7 +52,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
     const transformHelper = {
         Math: Math,
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
-            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url)),
+            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name)),
         expressionReduce: (list: ArrayLike<any>, init: any, expression: string) => !list ? init : Array.from(list).reduce(
             (partial, item) => doEvaluate(expression, partial, Object.assign({}, transformHelper, data, item)),
             init),
@@ -82,7 +82,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         // expressionGroup_expArgs: [1],
         // merge: (obj0: object, ...objs: object[]) => merge(obj0, ...objs),
         pathPattern: (pattern: string, decode?: boolean) => 
-            resolvePathPatternWithUrl(pattern, url, data, undefined, decode),
+            resolvePathPatternWithUrl(pattern, url, data, name, decode),
         newDate: (...args: any[]) => args.length === 0
             ? new Date()
             : (args.length === 1
@@ -113,7 +113,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         if (transformObject.length === 0
             || typeof transformObject[0] !== 'string'
             || !transformObject[0].endsWith("()")) {
-                return transformObject.map(item => transformation(item, data, url));
+                return transformObject.map(item => transformation(item, data, url, name));
         }
         const expr = arrayToFunction(transformObject, transformHelper);
         console.log('expr ' + expr);
@@ -123,11 +123,11 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         let transformed: any = {};
         const selfObject = transformObject['$this'] || transformObject['.'];
         if (selfObject) {
-            transformed = shallowCopy(transformation(selfObject, data, url));
+            transformed = shallowCopy(transformation(selfObject, data, url, name));
         }
         for (const key in transformObject) {
             if (key === '.' || key === '$this') continue;
-            doTransformKey(key, 0, data, transformed, url, transformObject[key]);
+            doTransformKey(key, 0, data, transformed, url, transformObject[key], name);
         }
         return rectifyObject(transformed);
     }
@@ -142,11 +142,11 @@ const rectifyObject = (obj: any) => {
     return newObj;
 };
 
-const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any) => {
+const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any, name: string) => {
     let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
     if (newKeyStart < 0) {
         const effectiveKey = key.slice(keyStart);
-        output[effectiveKey] = shallowCopy(transformation(subTransform, input, url));
+        output[effectiveKey] = shallowCopy(transformation(subTransform, input, url, name));
     } else if (match === '.') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
         if (keyStart === 0 && !(keyPart in input)) return;
@@ -156,7 +156,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
             output[keyPart] = shallowCopy(output[keyPart]);
         }
         console.log(`recursing path, new start: ${newKeyStart}, new output: ${JSON.stringify(output[keyPart])}`);
-        doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform);
+        doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform, name);
     } else if (match === '[' || match === '{') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim(); // the property key before the array
         let newOutput = output;
@@ -175,9 +175,9 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
 
         const transformOrRecurse = (input: any, index: number | string) => {
             if (remainingKey) {
-                doTransformKey(remainingKey, 0, input, newOutput[index], url, subTransform);
+                doTransformKey(remainingKey, 0, input, newOutput[index], url, subTransform, name);
             } else {
-                newOutput[index] = shallowCopy(transformation(subTransform, input, url));
+                newOutput[index] = shallowCopy(transformation(subTransform, input, url, name));
             }
         }
 
