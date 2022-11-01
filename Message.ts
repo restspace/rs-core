@@ -235,6 +235,7 @@ export class Message {
         msg.authenticated = this.authenticated;
         msg.internalPrivilege = this.internalPrivilege;
         msg.user = this.user;
+        msg.name = this.name;
         return msg.setStatus(this.status);
     }
 
@@ -244,6 +245,18 @@ export class Message {
         newMsg.data = this.data ? this.data.copy() : undefined;
         if (newMsg.data) this.uninitiatedDataCopies.push(newMsg.data);
         return newMsg;
+    }
+
+    private setMetadataOn(msg: Message) {
+        msg.externalUrl = this.externalUrl ? this.externalUrl.copy() : null;
+        msg.depth = this.depth;
+        msg.conditionalMode = this.conditionalMode;
+        msg.authenticated = this.authenticated;
+        msg.internalPrivilege = this.internalPrivilege;
+        msg.user = this.user;
+        msg.name = this.name;
+        const traceparent = this.getHeader('traceparent');
+        if (traceparent) msg.setHeader('traceparent', traceparent);
     }
 
     hasData(): boolean {
@@ -555,6 +568,8 @@ export class Message {
         }
         const msgOut = Message.fromResponse(resp, this.tenant);
         msgOut.method = this.method; // slightly pointless
+        msgOut.name = this.name;
+        this.setMetadataOn(msgOut);
         return msgOut;
     }
 
@@ -576,10 +591,7 @@ export class Message {
             msg.data = msg.data || this.data;
             msg._headers = { ...this._headers };
             msg.setStatus(this.status);
-            msg.internalPrivilege = this.internalPrivilege;
-            msg.depth = this.depth;
-            msg.authenticated = this.authenticated;
-            msg.user = this.user;
+            this.setMetadataOn(msg);
         });
         return msgs;
     }
