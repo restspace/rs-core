@@ -49,7 +49,7 @@ Deno.test('root domain', () => {
 });
 Deno.test('query string', () => {
     const url = new Url('/?abc=def');
-    assertEquals(url.query['abc'], 'def');
+    assertEquals(url.query['abc'][0], 'def');
 });
 Deno.test('query string on root domain', () => {
     const url = new Url('http://spot.com?bn1=yyy');
@@ -61,7 +61,7 @@ Deno.test('full url', () => {
     assertEquals(url.domain, 'spot.com');
     assertEquals(url.scheme, 'http://');
     assertEquals(url.path, '/abc/def');
-    assertEquals(url.query['abc'], 'def');
+    assertEquals(url.query['abc'][0], 'def');
     assertEquals(url.fragment, '123');
     assert(!url.isRelative);
 });

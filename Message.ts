@@ -247,7 +247,7 @@ export class Message {
         return newMsg;
     }
 
-    private setMetadataOn(msg: Message) {
+    setMetadataOn(msg: Message) {
         msg.externalUrl = this.externalUrl ? this.externalUrl.copy() : null;
         msg.depth = this.depth;
         msg.conditionalMode = this.conditionalMode;
@@ -551,8 +551,10 @@ export class Message {
         const traceparent = this.getHeader('traceparent');
         if (traceparent) {
             const parts = traceparent.split('-');
-            traceId = parts[1];
-            spanId = parts[2];
+            if (parts.length >= 3) {
+                traceId = parts[1];
+                spanId = parts[2];
+            }
         }
         return [ this.tenant, this.user?.email || '?', traceId, spanId ];
     }
@@ -563,8 +565,8 @@ export class Message {
         try {
             resp = await fetch(this.toRequest());
         } catch (err) {
-            console.error(`Request failed: ${err}`);
-            return this.setStatus(500, 'request fail');
+            console.error(`External request failed: ${err}`);
+            return this.setStatus(500, `External request fail: ${err}`);
         }
         const msgOut = Message.fromResponse(resp, this.tenant);
         msgOut.method = this.method; // slightly pointless
