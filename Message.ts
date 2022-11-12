@@ -123,6 +123,15 @@ export class Message {
         this._headers = valLowerCase;
     }
 
+    get schema(): string {
+        const contentType = this.getHeader('content-type');
+        if (contentType.includes("schema=")) {
+            return upTo(after(contentType, 'schema="'), '"');
+        } else {
+            return '';
+        }
+    }
+
     get data(): MessageBody | undefined {
         return this._data;
     }
