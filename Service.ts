@@ -169,6 +169,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         return this;
     }
 
+    /** Set the initialization function which will be called for every instance of this service created when a tenant starts up */
     initializer(initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => Promise<void>) {
 
         this.initFunc = (context: ServiceContext<TAdapter>, config: TConfig) => {

@@ -49,7 +49,7 @@ const applyTransform = async <TConfig extends IServiceConfig = IServiceConfig>(t
 	}
 }
 
-const schemaInstanceMime = (url: Url) => {
+export const schemaInstanceMime = (url: Url) => {
 	const schemaUrl = pathCombine(url.baseUrl(), upToLast(url.servicePath, '/'), ".schema.json");
 	return `application/json; schema="${schemaUrl}"`;
 };
@@ -94,7 +94,7 @@ export interface BuildStoreParams<TAdapter extends IAdapter = IAdapter, TConfig 
 	mapUrlDelete?: MapUrl;
 	createTest?: (msg: Message) => boolean;
 	mapUrlCreate?: MapUrl;
-	mapUrlDirectoryRead?: MapUrl;
+	mapUrlDirectoryRead?: MapUrl | null;
 	mapUrlDirectoryDelete?: MapUrl;
 	transformDirectory?: Transform<TConfig>;
 	transformRead?: Transform<TConfig>;
@@ -110,7 +110,7 @@ export interface BuildStoreParams<TAdapter extends IAdapter = IAdapter, TConfig 
  * @param {MapUrl} mapUrlWrite - Map the called url into the underlying API url for write
  * @param {MapUrl} mapUrlDelete - Map the called url into the underlying API url for deletion
  * @param {[ (msg: Message) => boolean, MapUrl ]} mapUrlCreate - Map the called url into the underlying API url for creation
- * @param {MapUrl} mapUrlDirectoryRead - Map the called url into the underlying API url for reading a directory
+ * @param {MapUrl | null} mapUrlDirectoryRead - Map the called url into the underlying API url for reading a directory. If null, don't call the underlying API, the directory is supplied by transformDirectory.
  * @param {MapUrl} mapUrlDirectoryDelete - Map the called url into the underlying API url for directory deletion
  * @param {Transform<TConfig>} transformDirectory - Transform the directory list from the underlying API
  * @param {Transform<TConfig>} transformRead - Transform the read data from the underlying API
@@ -133,15 +133,25 @@ export const buildStore = <TAdapter extends IAdapter = IAdapter, TConfig extends
 }: BuildStoreParams<TAdapter, TConfig>
 ) => {
 	service.getDirectoryPath(basePath, async (msg, context, config) => {
-		if (!mapUrlDirectoryRead) return msg.setStatus(500, 'No mapping for directory read configured when building store');
-		const transformedUrl = applyMapUrl(mapUrlDirectoryRead, msg, config);
-		if (transformedUrl instanceof Message) return transformedUrl;
-		const [ url, method ] = transformedUrl;
-		const reqMsg = new Message(url, context.tenant, method, msg);
-		reqMsg.startSpan();
-		const dirResp = await context.makeProxyRequest!(reqMsg);
+		if (mapUrlDirectoryRead === undefined) return msg.setStatus(500, 'No mapping for directory read configured when building store');
+		let dirJson: Message | DirDescriptor;
+		if (mapUrlDirectoryRead !== null) {
+			const transformedUrl = applyMapUrl(mapUrlDirectoryRead, msg, config);
+			if (transformedUrl instanceof Message) return transformedUrl;
+			const [ url, method ] = transformedUrl;
+			const reqMsg = new Message(url, context.tenant, method, msg);
+			reqMsg.startSpan();
+			const dirResp = await context.makeProxyRequest!(reqMsg);
 
-		const dirJson = await applyTransform(transformDirectory, dirResp, config) as DirDescriptor | Message;
+			dirJson = await applyTransform(transformDirectory, dirResp, config) as DirDescriptor | Message;
+		} else {
+			if (typeof transformDirectory !== 'function') {
+				return msg.setStatus(400, 'buildStore wrongly configured with null mapUrlDirectoryRead and non-function transformDirectory');
+			}
+
+			// in this case, transformDirectory gets the directory paths
+			dirJson = await transformDirectory({}, msg, config, context);
+		}
 		if (dirJson instanceof Message) return dirJson;
 
 		dirJson.path = msg.url.servicePath;
