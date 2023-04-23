@@ -78,6 +78,8 @@ const headerDate = (d: Date) => {
 
 export type MessageMethod = "" | "GET" | "PUT" | "POST" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
 
+export type CacheType = "none";
+
 export class Message {
     cookies: { [key: string]: string } = {};
     context: { [key: string]: Record<string, unknown> } = {};
@@ -366,6 +368,21 @@ export class Message {
             this.setData(message, 'text/plain');
         }
         this.status = status;
+        if (status >= 400) {
+            // default caching for an error is none as error state may change in near future
+            this.setCaching('none');
+        }
+        return this;
+    }
+
+    setCaching(caching: CacheType) {
+        switch (caching) {
+            case "none":
+                this.setHeader("cache-control", "no-cache, no-store, must-revalidate");
+                this.setHeader("Pragma", "no-cache");
+                this.removeHeader('Expires');
+                break;
+        }
         return this;
     }
 
