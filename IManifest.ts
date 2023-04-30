@@ -8,6 +8,7 @@ export interface IManifest {
     moduleUrl?: string;
     // JSON Schema for configuration
     configSchema?: Record<string, unknown>;
+    configTemplate?: IServiceConfigTemplate,
     defaults?: Partial<IServiceConfig>;
 }
 
