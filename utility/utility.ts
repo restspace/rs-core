@@ -1,4 +1,4 @@
-import * as path from "std/path/mod.ts"
+import * as path from "https://deno.land/std@0.185.0/path/mod.ts"
 
 export function slashTrim(s: string): string {
     let start = 0;
@@ -64,8 +64,9 @@ export function firstMatch(s: string, possMatches: string[], start: number, incl
         if (pos < 0 && includePartial) {
             pos = offsetMatch(s, match);
         }
-        return (pos >= 0 && (pos < bestPos || bestPos < 0)) ? [ pos, match ] : [ bestPos, bestMatch ];
-    }, [ -1, '' ]);
+        const next: [ number, string ] = (pos >= 0 && (pos < bestPos || bestPos < 0)) ? [ pos, match ] : [ bestPos, bestMatch ];
+        return next;
+    }, [ -1, '' ] as [ number, string ]);
     return res as [ number, string];
 }
 

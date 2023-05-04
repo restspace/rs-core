@@ -2,7 +2,7 @@ import { isJson, isText } from "./mimeType.ts";
 import { decodeURIComponentAndPlus, getProp } from "./utility/utility.ts";
 import { ab2b64, ab2str, str2ab } from "./utility/arrayBufferUtility.ts";
 import { stripBom } from "https://deno.land/x/string/mod.ts";
-import { readerFromStreamReader } from "std/io/streams.ts"
+import { readerFromStreamReader } from "https://deno.land/std@0.185.0/streams/reader_from_stream_reader.ts"
 
 export class MessageBody {
     statusCode = 0;

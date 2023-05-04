@@ -5,7 +5,7 @@ import { longestMatchingPath, PathMap } from "./PathMap.ts";
 import { Url } from "./Url.ts";
 import Ajv, { Schema } from "https://cdn.skypack.dev/ajv?dts";
 import { getErrors } from "./utility/errors.ts";
-import { ServiceContext, SimpleServiceContext } from "./ServiceContext.ts";
+import { ServiceContext } from "./ServiceContext.ts";
 import { PathInfo } from "./DirDescriptor.ts";
 import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
 import { after } from "./utility/utility.ts";

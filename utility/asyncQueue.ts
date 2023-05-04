@@ -1,4 +1,4 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "https://deno.land/x/eventemitter@1.2.4/mod.ts";
 
 export class ArrayQueue<T> extends Array<T> {
     enqueue(value: T) {

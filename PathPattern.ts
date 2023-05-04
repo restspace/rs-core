@@ -60,7 +60,7 @@ export function resolvePathPattern(pathPattern: string,
         })
         .replace(/\$\?(\*|\((.+?)\))/g, (_match, p1, p2) => {
             if (p1 === '*') return queryString(query);
-            return (query || {})[p2] === [] ? '$$' : ((query || {})[p2] || []).join(',') || '$$'
+            return (query?.[p2] || []).length === 0 ? '$$' : ((query || {})[p2] || []).join(',') || '$$'
         })
         .replace('/$$', '') // empty substitutions eat an immediately previous / to avoid unintentional double or trailing /
         .replace('$$', '');

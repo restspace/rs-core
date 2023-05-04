@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertThrows } from "std/testing/asserts.ts";
+import { assert, assertEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
 
 Deno.test('single var', function () {

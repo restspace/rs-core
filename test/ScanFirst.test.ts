@@ -1,4 +1,4 @@
-import { assertEquals } from "std/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { scanFirst, scanCloseJsBracket } from "../utility/utility.ts";
 
 Deno.test("no matches", function () {

@@ -1,4 +1,4 @@
-import { extension, typeByExtension } from "std/media_types/mod.ts";
+import { extension, typeByExtension } from "https://deno.land/std@0.185.0/media_types/mod.ts";
 
 const textTypes = [
     "text/",

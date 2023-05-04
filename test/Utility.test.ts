@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertStrictEquals, assertThrows } from "std/testing/asserts.ts";
+import { assert, assertEquals, assertStrictEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { getProp, setProp, deleteProp, patch } from '../utility/utility.ts';
 
 Deno.test('getProp from null', function () {

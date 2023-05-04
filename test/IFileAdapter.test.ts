@@ -1,4 +1,4 @@
-import { assertEquals, assert } from "std/testing/asserts.ts";
+import { assertEquals, assert } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { MessageBody } from '../MessageBody.ts';
 import { IFileAdapter } from '../adapter/IFileAdapter.ts';
 

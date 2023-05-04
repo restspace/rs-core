@@ -1,6 +1,6 @@
-import { writeAll } from "std/io/util.ts";
-import { ensureDir } from "std/fs/ensure_dir.ts";
-import { dirname } from "std/path/mod.ts";
+import { writeAll } from "https://deno.land/std@0.185.0/streams/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.185.0/fs/ensure_dir.ts";
+import { dirname } from "https://deno.land/std@0.185.0/path/mod.ts";
 
 const BUF_SIZE = 64 * 1024;
 

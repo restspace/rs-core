@@ -4,9 +4,10 @@ import { PrePost } from "./IServiceConfig.ts";
 import { Message } from "./Message.ts";
 import { PipelineSpec } from "./PipelineSpec.ts";
 import { Url } from "./Url.ts";
-import * as log from "std/log/mod.ts";
-import { StateFunction } from "../rs-runtime/tenant.ts";
+import * as log from "https://deno.land/std@0.185.0/log/mod.ts";
 import { Source } from "./Source.ts";
+
+export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, context: SimpleServiceContext, config: unknown) => Promise<T>;
 
 export interface SimpleServiceContext {
     tenant: string;

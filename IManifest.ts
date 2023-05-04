@@ -1,5 +1,5 @@
-import { IServiceConfig, IServiceConfigTemplate } from "rs-core/IServiceConfig.ts";
-import { PipelineSpec } from "rs-core/PipelineSpec.ts";
+import { IServiceConfig, IServiceConfigTemplate } from "./IServiceConfig.ts";
+import { PipelineSpec } from "./PipelineSpec.ts";
 
 export interface IManifest {
     name: string;
