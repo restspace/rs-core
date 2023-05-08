@@ -5,7 +5,7 @@ import { longestMatchingPath, PathMap } from "./PathMap.ts";
 import { Url } from "./Url.ts";
 import Ajv, { Schema } from "https://cdn.skypack.dev/ajv?dts";
 import { getErrors } from "./utility/errors.ts";
-import { ServiceContext } from "./ServiceContext.ts";
+import { BaseStateClass, ServiceContext } from "./ServiceContext.ts";
 import { PathInfo } from "./DirDescriptor.ts";
 import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
 import { after } from "./utility/utility.ts";
@@ -25,7 +25,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     
     methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {};
     schemas: { [ method: string ]: PathMap<Schema> } = {};
-    initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => Promise<void> = () => Promise.resolve();
+    initFunc: (context: ServiceContext<TAdapter>, config: TConfig, oldState?: BaseStateClass) => Promise<void> = () => Promise.resolve();
 
     /** Get a service function by the base url, preferring the longest matching url */
     funcByUrl(method: string, url: Url) : [ string[], ServiceFunction<TAdapter, TConfig> ] | undefined {
@@ -170,11 +170,11 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     }
 
     /** Set the initialization function which will be called for every instance of this service created when a tenant starts up */
-    initializer(initFunc: (context: ServiceContext<TAdapter>, config: TConfig) => Promise<void>) {
+    initializer(initFunc: (context: ServiceContext<TAdapter>, config: TConfig, oldState?: BaseStateClass) => Promise<void>) {
 
-        this.initFunc = (context: ServiceContext<TAdapter>, config: TConfig) => {
+        this.initFunc = (context: ServiceContext<TAdapter>, config: TConfig, oldState?: BaseStateClass) => {
             this.enhanceContext(context, config);
-            return initFunc(context, config);
+            return initFunc(context, config, oldState);
         };
     }
 

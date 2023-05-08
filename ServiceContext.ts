@@ -32,7 +32,7 @@ export class BaseStateClass {
     load(_context: SimpleServiceContext, _config: unknown) {
         return Promise.resolve();
     }
-    unload() {
+    unload(newState?: BaseStateClass) {
         return Promise.resolve();
     }
 } 
