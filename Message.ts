@@ -9,6 +9,7 @@ import { after, getProp, upTo, upToLast } from "./utility/utility.ts";
 import { IAuthUser } from "./user/IAuthUser.ts";
 import { AsyncQueue } from "./utility/asyncQueue.ts";
 import { ErrorObject, ValidateFunction } from "https://cdn.skypack.dev/ajv?dts";
+import { SimpleServiceContext } from "./ServiceContext.ts";
 
 const sendHeaders: string[] = [
     "accept-ranges",
@@ -92,6 +93,7 @@ export class Message {
     externalUrl: Url | null = null;
     user: IAuthUser | null = null;
     websocket: WebSocket | null = null;
+    tenant: string;
     protected _status = 0;
     protected _data?: MessageBody;
     protected uninitiatedDataCopies: MessageBody[] = [];
@@ -198,7 +200,7 @@ export class Message {
     //     }
     // }
 
-    constructor(url: Url | string, public tenant: string, public method: MessageMethod = "GET", parent: Message | null, headers?: Headers | { [key:string]: string | string[] }, data?: MessageBody) {
+    constructor(url: Url | string, public tenantOrContext: string | SimpleServiceContext, public method: MessageMethod = "GET", parent?: Message | null, headers?: Headers | { [key:string]: string | string[] }, data?: MessageBody) {
         this.url = (typeof url === 'string') ? new Url(url) : url;
         this.data = data;
         if (headers) {
@@ -216,17 +218,28 @@ export class Message {
 
         //inherit tracing from parent or set up
 
-        if (parent === null) {
+        if (!parent) {
             const traceId = crypto.randomUUID().replace(/-/g, '');
             const spanId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
             this.setHeader('traceparent', `00-${traceId}-${spanId}-00`);
-        } else {
+        } else if (parent instanceof Message) {
             const traceparent = parent.getHeader('traceparent');
             if (traceparent) {
                 this.setHeader('traceparent', traceparent);
                 const tracestate = parent.getHeader('tracestate');
                 if (tracestate) this.setHeader('tracestate', tracestate);
             }
+        } else if (typeof tenantOrContext !== 'string') {
+            if (tenantOrContext.traceparent) {
+                this.setHeader('traceparent', tenantOrContext.traceparent);
+                if (tenantOrContext.tracestate) this.setHeader('tracestate', tenantOrContext.tracestate);
+            }
+        }
+
+        if (typeof tenantOrContext === 'string') {
+            this.tenant = tenantOrContext;
+        } else {
+            this.tenant = tenantOrContext.tenant;
         }
 
         const cookieStrings = ((this.headers['cookie'] as string) || '').split(';');
