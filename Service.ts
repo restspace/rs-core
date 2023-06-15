@@ -6,7 +6,7 @@ import { Url } from "./Url.ts";
 import Ajv, { Schema } from "https://cdn.skypack.dev/ajv?dts";
 import { getErrors } from "./utility/errors.ts";
 import { BaseStateClass, ServiceContext } from "./ServiceContext.ts";
-import { PathInfo } from "./DirDescriptor.ts";
+import { DirDescriptor, PathInfo } from "./DirDescriptor.ts";
 import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
 import { after } from "./utility/utility.ts";
 
@@ -23,7 +23,41 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     /** Returns a Service which returns every message unchanged */
     static Identity = (new Service()).setMethodPath("all", "/", msg => Promise.resolve(msg));
     
-    methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {};
+    methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {
+        get: {
+            '/': (msg, context, config) => {
+                const patternName = context.manifest.apis
+                    ?.find(api => ['store', 'store-transform', 'transform', 'view', 'operation'].includes(api)) || 'none';
+        
+                let spec: ApiSpec;
+                switch (patternName) {
+                    case 'transform':
+                        spec = {
+                            pattern: 'transform',
+                            
+                        };
+                        break;
+                    case 'view':
+                        break;
+                    case 'operation':
+                        break;
+                    default:
+                        return msg;
+                }
+
+                const resp: DirDescriptor = {
+                    path: '/',
+                    paths: this.pathsAt('/'),
+                    spec: {
+                        pattern: (context.manifest.apis || [])
+                            .find(api => ['store', 'store-transform', 'transform', 'view', 'operation']
+                                .includes(api)) || 'view',
+                    }
+                }
+                return msg;
+            }
+        }
+    };
     schemas: { [ method: string ]: PathMap<Schema> } = {};
     initFunc: (context: ServiceContext<TAdapter>, config: TConfig, oldState?: BaseStateClass) => Promise<void> = () => Promise.resolve();
 
