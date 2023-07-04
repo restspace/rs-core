@@ -76,7 +76,7 @@ Deno.test('copy rel', () => {
     assertEquals(url.toString(), url2.toString());
 });
 Deno.test('copy site rel', () => {
-    const url = new Url('/abc/def?mno=pqr&abc=def#123');
+    const url = new Url('/abc/def?mno=pqr&abc=def#123&qqq');
     const url2 = url.copy();
     assertEquals(url.toString(), url2.toString());
 });

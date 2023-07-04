@@ -1,4 +1,4 @@
-export type ApiPattern = "store" | "transform" | "storeTransform" | "view" | "operation" | "directory";
+export type ApiPattern = "store" | "transform" | "store-transform" | "view" | "operation" | "directory";
 
 export interface StoreDetails {
     storeMimeTypes: string[],

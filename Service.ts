@@ -23,41 +23,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     /** Returns a Service which returns every message unchanged */
     static Identity = (new Service()).setMethodPath("all", "/", msg => Promise.resolve(msg));
     
-    methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {
-        get: {
-            '/': (msg, context, config) => {
-                const patternName = context.manifest.apis
-                    ?.find(api => ['store', 'store-transform', 'transform', 'view', 'operation'].includes(api)) || 'none';
-        
-                let spec: ApiSpec;
-                switch (patternName) {
-                    case 'transform':
-                        spec = {
-                            pattern: 'transform',
-                            
-                        };
-                        break;
-                    case 'view':
-                        break;
-                    case 'operation':
-                        break;
-                    default:
-                        return msg;
-                }
-
-                const resp: DirDescriptor = {
-                    path: '/',
-                    paths: this.pathsAt('/'),
-                    spec: {
-                        pattern: (context.manifest.apis || [])
-                            .find(api => ['store', 'store-transform', 'transform', 'view', 'operation']
-                                .includes(api)) || 'view',
-                    }
-                }
-                return msg;
-            }
-        }
-    };
+    methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {};
     schemas: { [ method: string ]: PathMap<Schema> } = {};
     initFunc: (context: ServiceContext<TAdapter>, config: TConfig, oldState?: BaseStateClass) => Promise<void> = () => Promise.resolve();
 
@@ -210,6 +176,13 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
             this.enhanceContext(context, config);
             return initFunc(context, config, oldState);
         };
+    }
+
+    constantDirectory(path: string, dirSpec: DirDescriptor) {
+        return this.setMethodPath('getDirectory', path, (msg) => {
+            msg.setDirectoryJson(dirSpec);
+            return msg;
+        });
     }
 
     /** Handle all GET method messages at or under the configured base path using the supplied ServiceFunction */

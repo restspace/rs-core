@@ -39,6 +39,13 @@ export interface ICacheControl {
     sendETag?: boolean;
 }
 
+export interface ManualMimeTypes {
+	requestMimeType: string;
+	requestSchema: Record<string, unknown>;
+	responseMimeType: string;
+	responseSchema: Record<string, unknown>;
+}
+
 export interface IConfigFromManifest {
     privateServiceConfigs?: Record<string, IServiceConfig>;
     prePipeline?: PipelineSpec;

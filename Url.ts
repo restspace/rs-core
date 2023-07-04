@@ -74,7 +74,7 @@ export class Url {
 
     get queryString(): string {
         return Object.entries(this.query).flatMap(([key, vals]) =>
-            vals.map(val => `${key}=${this.encodeQueryValue(val)}`)
+            vals.length == 0 ? [ key ] : vals.map(val => `${key}=${this.encodeQueryValue(val)}`)
         ).join('&') || '';
     }
     set queryString(qs: string) {
