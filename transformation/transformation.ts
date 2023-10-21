@@ -31,9 +31,9 @@ const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) =
     return `${functionName}(${args.join(', ')})`;
 }
 
-const doEvaluate = (expression: string, context: any, helper: any) => {
+const doEvaluate = (expression: string, context: any, variables: Record<string, unknown>, helper: any) => {
     try {
-        return evaluate(expression, context, helper);
+        return evaluate(expression, Object.assign({}, context, variables), helper);
     } catch (err) {
         throw SyntaxError('Transform failed', {
             cause: err,
@@ -42,7 +42,7 @@ const doEvaluate = (expression: string, context: any, helper: any) => {
     }
 }
 
-export const transformation = (transformObject: any, data: any, url: Url = new Url('/'), name = ''): any => {
+export const transformation = (transformObject: any, data: any, url: Url = new Url('/'), name = '', variables = {} as Record<string, unknown>): any => {
     /*
     {
         transfList: "transformMap(origList, { x: y + 1 })" // takes origList and applies transform object to map x to y + 1
@@ -54,23 +54,23 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
             !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name)),
         expressionReduce: (list: ArrayLike<any>, init: any, expression: string) => !list ? init : Array.from(list).reduce(
-            (partial, item) => doEvaluate(expression, partial, Object.assign({}, transformHelper, data, item)),
+            (partial, item) => doEvaluate(expression, partial, variables, Object.assign({}, transformHelper, data, item)),
             init),
         expressionReduce_expArgs: [2],
         expressionMap: (list: ArrayLike<any>, expression: string) => !list ? [] : Array.from(list).map(
-            (item) => doEvaluate(expression, item, Object.assign({}, transformHelper, data))),
+            (item) => doEvaluate(expression, item, variables, Object.assign({}, transformHelper, data))),
         expressionMap_expArgs: [1],
         expressionFilter: (list: ArrayLike<any>, expression: string) => !list ? [] : Array.from(list).filter(
-            (item) => doEvaluate(expression, item, Object.assign({}, transformHelper, data))),
+            (item) => doEvaluate(expression, item, variables, Object.assign({}, transformHelper, data))),
         expressionFilter_expArgs: [1],
         expressionFind: (list: ArrayLike<any>, expression: string) => !list ? null : Array.from(list).find(
-            (item) => doEvaluate(expression, item, Object.assign({}, transformHelper, data))),
+            (item) => doEvaluate(expression, item, variables, Object.assign({}, transformHelper, data))),
         expressionFind_expArgs: [1],
         expressionSort: (list: ArrayLike<any>, expression: string, dir?: string) => !list ? null : Array.from(list).sort(
             (a, b) => {
                 const ctx = Object.assign({}, transformHelper, data);
-                const expA = doEvaluate(expression, a, ctx);
-                const expB = doEvaluate(expression, b, ctx);
+                const expA = doEvaluate(expression, a, variables, ctx);
+                const expB = doEvaluate(expression, b, variables, ctx);
                 const res = expA == expB ? 0 : (expA < expB ? -1 : 1)
                 return dir === 'desc' ? -res : res;
             }),
@@ -108,7 +108,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
     }
 
     if (typeof transformObject === 'string') {
-        return doEvaluate(transformObject, data, transformHelper);
+        return doEvaluate(transformObject, data, variables, transformHelper);
     } else if (Array.isArray(transformObject)) {
         if (transformObject.length === 0
             || typeof transformObject[0] !== 'string'
@@ -117,17 +117,21 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         }
         const expr = arrayToFunction(transformObject, transformHelper);
         console.log('expr ' + expr);
-        const arrResult = doEvaluate(expr, data, transformHelper);
+        const arrResult = doEvaluate(expr, data, variables, transformHelper);
         return arrResult;
     } else {
         let transformed: any = {};
         const selfObject = transformObject['$this'] || transformObject['.'];
         if (selfObject) {
-            transformed = shallowCopy(transformation(selfObject, data, url, name));
+            transformed = shallowCopy(transformation(selfObject, data, url, name, variables));
         }
         for (const key in transformObject) {
             if (key === '.' || key === '$this') continue;
-            doTransformKey(key, 0, data, transformed, url, transformObject[key], name);
+            if (key.startsWith('$') && key.length > 1 && key !== '$key') {
+                variables[key] = shallowCopy(transformation(transformObject[key], data, url, name, variables));
+            } else {
+                doTransformKey(key, 0, data, transformed, url, transformObject[key], name, variables);
+            }
         }
         return rectifyObject(transformed);
     }
@@ -142,11 +146,16 @@ const rectifyObject = (obj: any) => {
     return newObj;
 };
 
-const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any, name: string) => {
+// Here we take a key (a property path) into the output data and assign the input to it.
+// To do this safely we need to ensure we're not updating something that has a reference to it
+// elsewhere in the output which would make the update affect multiple points on the property
+// tree of the output, so we copy the output tree shallowly each time we follow a segment of the
+// property path
+const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any, name: string, variables: Record<string, unknown>) => {
     let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
     if (newKeyStart < 0) {
         const effectiveKey = key.slice(keyStart);
-        output[effectiveKey] = shallowCopy(transformation(subTransform, input, url, name));
+        output[effectiveKey] = shallowCopy(transformation(subTransform, input, url, name, variables));
     } else if (match === '.') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
         if (keyStart === 0 && !(keyPart in input)) return;
@@ -156,7 +165,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
             output[keyPart] = shallowCopy(output[keyPart]);
         }
         console.log(`recursing path, new start: ${newKeyStart}, new output: ${JSON.stringify(output[keyPart])}`);
-        doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform, name);
+        doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform, name, variables);
     } else if (match === '[' || match === '{') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim(); // the property key before the array
         let newOutput = output;
@@ -173,17 +182,18 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         indexName = indexName.trim();
         const remainingKey = key.slice(newKeyStart + 1);
 
-        const transformOrRecurse = (input: any, index: number | string) => {
+        const transformOrRecurse = (input: any, index: number | string, output: any) => {
             if (remainingKey) {
-                doTransformKey(remainingKey, 0, input, newOutput[index], url, subTransform, name);
+                output[index] = shallowCopy(output[index]);
+                doTransformKey(remainingKey, 0, input, output[index], url, subTransform, name, variables);
             } else {
-                newOutput[index] = shallowCopy(transformation(subTransform, input, url, name));
+                output[index] = shallowCopy(transformation(subTransform, input, url, name));
             }
         }
 
         // plain numeric index in [] in path
         if (match === '[' && '0' <= indexName[0] && indexName[0] <= '9') {
-            transformOrRecurse(input, parseInt(indexName));
+            transformOrRecurse(input, parseInt(indexName), newOutput);
         } else if (match === '[') { // loop context name in [] in path
             let list = newOutput;
 
@@ -194,7 +204,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
                         ? { ...(v as any), "$key": k }
                         : v
                     ));
-                    for (const k in newOutput) delete newOutput[k];
+                    //for (const k in newOutput) delete newOutput[k];
                 } else {
                     return;
                 }
@@ -210,7 +220,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
                     outer: input.outer || input,
                     [indexName]: loopItem
                 };
-                transformOrRecurse(newInput, idx);
+                transformOrRecurse(newInput, idx, newOutput);
             });
             if (!('length' in newOutput)) newOutput.length = list.length;
             if (!remainingKey) { // remove items set to undefined (mutate newOutput)
@@ -227,7 +237,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
                     outer: input.outer || input,
                     [indexName]: { key, value }
                 };
-                transformOrRecurse(newInput, key);
+                transformOrRecurse(newInput, key, newOutput);
             });
             if (!remainingKey) { // remove properties with values set to undefined
                 newOutput = Object.fromEntries(Object.entries(newOutput).filter(([_, v]) => v !== undefined));

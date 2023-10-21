@@ -352,3 +352,28 @@ Deno.test('avoid output multiple paths pointing to same data (deep)', function (
     const output = transformation(transform, input);
     assertEquals(output.a[1].y, 2);
 });
+Deno.test('variables set', function () {
+    const input = {
+        a: [ { x: 1}, { y: 2 }, { z: 3 } ]
+    };
+    const transform = {
+        "$this": "$this",
+        "$xyz": "a[2].z"
+    };
+    const variables = {} as Record<string, unknown>;
+    const _output = transformation(transform, input, undefined, undefined, variables);
+    assertEquals(variables.$xyz, 3);
+});
+Deno.test('variables use', function () {
+    const input = {
+        a: [ { x: 1}, { y: 2 }, { z: 3 } ]
+    };
+    const transform = {
+        "$this": "$this",
+        "$xyz": "a[2].z",
+        "val": "$xyz * 2"
+    };
+    const variables = {} as Record<string, unknown>;
+    const output = transformation(transform, input, undefined, undefined, variables);
+    assertEquals(output.val, 6);
+});
