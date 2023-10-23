@@ -81,6 +81,14 @@ Deno.test('this list', function () {
     assertEquals(output[0], 3);
     assertEquals(output[1], 9);
 });
+Deno.test('this string', function () {
+    const input = "hello";
+    const transform = {
+        "a": "$"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.a, "hello");
+});
 
 Deno.test('path key', function () {
     const input = {
@@ -243,7 +251,7 @@ Deno.test('convert object to list', function () {
         c: 3
     };
     const transform = {
-        "$this": "$this",
+        "$this": "$",
         "[item]": "item.value"
     };
     const output = transformation(transform, input);
@@ -376,4 +384,14 @@ Deno.test('variables use', function () {
     const variables = {} as Record<string, unknown>;
     const output = transformation(transform, input, undefined, undefined, variables);
     assertEquals(output.val, 6);
+});
+
+Deno.test('unique function', function () {
+    const input = { x: [ "abc", "abd", "abc" ] };
+    const transform = {
+        "$this": "unique(x)"
+    };
+    const output = transformation(transform, input);
+    console.log(JSON.stringify(output));
+    assertEquals(output.length, 2);
 });

@@ -49,6 +49,9 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         user: "getUrl(userUrl)" // does a GET on the url and inserts the JSON value as a result
     }
     */
+    variables['$'] = data;
+    if (Array.isArray(data)) data = { ...data, length: data.length };
+
     const transformHelper = {
         Math: Math,
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
@@ -75,7 +78,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
                 return dir === 'desc' ? -res : res;
             }),
         expressionSort_expArgs: [1],
-        unique: (list: ArrayLike<any>) => !list ? [] : [...new Set(Array.from(list))],
+        unique: (list: ArrayLike<any>) => !list ? [] : Array.from(new Set(Array.from(list))),
         pathCombine,
         // expressionGroup: (list: ArrayLike<any>, expression: string) => !list ? [] : groupBy(Array.from(list),
         //     (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
@@ -197,7 +200,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         } else if (match === '[') { // loop context name in [] in path
             let list = newOutput;
 
-            if (!Array.isArray(newOutput)) {
+            if (!Array.isArray(newOutput) && !(typeof newOutput === 'object' && 'length' in newOutput)) {
                 if (typeof newOutput === 'object') {
                     list = Object.entries(newOutput).map(([k, v]) => (
                         typeof v === 'object'
@@ -211,7 +214,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
             }
 
             const loopItem = {} as Record<string, unknown>;
-            list.forEach((item: any, idx: number) => {
+            Array.from(list).forEach((item: any, idx: number) => {
                 loopItem['value'] = item;
                 loopItem['index'] = idx;
                 const newInput = {
