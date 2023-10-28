@@ -367,10 +367,12 @@ export class Message {
         if (this.data?.data instanceof ReadableStream) {
             if (this.data.data.locked) throw new Error("Can't convert locked stream to request, will fail");
         }
+        let body = this.data?.data || undefined;
+        if (this.method === "GET" || this.method === "HEAD") body = undefined;
         const req = new Request(this.url.toString(), {
             method: this.method,
             headers: this.mapHeaders(this.nonForbiddenHeaders(), new Headers()),
-            body: this.data?.data || undefined,
+            body,
         });
         
         return req;
