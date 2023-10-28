@@ -487,6 +487,8 @@ export class Message {
         this.cancelOldStream();
         if (data == null) {
             this.data = undefined;
+            this.removeHeader("content-type");
+            return this;
         } else if (typeof data === 'string') {
             this.data = new MessageBody(str2ab(data), mimeType);
         } else {
