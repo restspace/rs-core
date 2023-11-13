@@ -334,7 +334,8 @@ export class Message {
     nonForbiddenHeaders() {
         const isForbidden = (h: string) => this.forbiddenHeaders.includes(h)
             || h.startsWith('proxy-')
-            || h.startsWith('sec-');
+            || h.startsWith('sec-')
+            || (!this.data && h.startsWith('content-'));
 
         return Object.fromEntries(Object.entries(this.headers)
             .filter(([k, _]) => !isForbidden(k)));
