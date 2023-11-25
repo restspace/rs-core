@@ -49,7 +49,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         user: "getUrl(userUrl)" // does a GET on the url and inserts the JSON value as a result
     }
     */
-    variables['$'] = data;
+    //variables['$'] = data;
     if (Array.isArray(data)) data = { ...data, length: data.length };
 
     const transformHelper = {
@@ -111,7 +111,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
     }
 
     if (typeof transformObject === 'string') {
-        return doEvaluate(transformObject, data, variables, transformHelper);
+        return rectifyObject(doEvaluate(transformObject, data, variables, transformHelper));
     } else if (Array.isArray(transformObject)) {
         if (transformObject.length === 0
             || typeof transformObject[0] !== 'string'
@@ -128,12 +128,14 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         if (selfObject) {
             transformed = shallowCopy(transformation(selfObject, data, url, name, variables));
         }
-        for (const key in transformObject) {
+        for (let key in transformObject) {
             if (key === '.' || key === '$this') continue;
-            if (key.startsWith('$') && key.length > 1 && key !== '$key') {
+            if (key.startsWith('$') && key.length > 1 && key !== '$key' && !key.startsWith('$$')) {
                 variables[key] = shallowCopy(transformation(transformObject[key], data, url, name, variables));
             } else {
-                doTransformKey(key, 0, data, transformed, url, transformObject[key], name, variables);
+                let keyStart = 0;
+                if (key.startsWith('$$') && key.length > 2) keyStart = 1;
+                doTransformKey(key, keyStart, data, transformed, url, transformObject[key], name, variables);
             }
         }
         return rectifyObject(transformed);
@@ -142,7 +144,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
 
 const rectifyObject = (obj: any) => {
     let newObj = obj;
-    if ('length' in obj && !Array.isArray(obj)) {
+    if (typeof obj === 'object' && 'length' in obj && !Array.isArray(obj)) {
         newObj = Array.from(obj);
     }
 

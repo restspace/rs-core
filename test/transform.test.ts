@@ -71,6 +71,14 @@ Deno.test('this override', function () {
     assertEquals(output.a, 1);
     assertEquals(output.b, 'abc');
 });
+Deno.test('this property', function () {
+    const input = [1,2,3];
+    const transform = {
+        "abc": "$this"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.abc, [1,2,3]);
+});
 Deno.test('this list', function () {
     const input = [ 3, 2, 1 ];
     const transform = {
@@ -84,7 +92,7 @@ Deno.test('this list', function () {
 Deno.test('this string', function () {
     const input = "hello";
     const transform = {
-        "a": "$"
+        "a": "$this"
     };
     const output = transformation(transform, input);
     assertEquals(output.a, "hello");
@@ -251,7 +259,7 @@ Deno.test('convert object to list', function () {
         c: 3
     };
     const transform = {
-        "$this": "$",
+        "$this": "$this",
         "[item]": "item.value"
     };
     const output = transformation(transform, input);
@@ -379,11 +387,11 @@ Deno.test('variables use', function () {
     const transform = {
         "$this": "$this",
         "$xyz": "a[2].z",
-        "val": "$xyz * 2"
+        "$$val": "$xyz * 2"
     };
     const variables = {} as Record<string, unknown>;
     const output = transformation(transform, input, undefined, undefined, variables);
-    assertEquals(output.val, 6);
+    assertEquals(output.$val, 6);
 });
 
 Deno.test('unique function', function () {

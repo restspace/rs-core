@@ -172,7 +172,9 @@ export class Message {
     }
     set name(name: string) {
         const cd = this.getHeader('Content-Disposition') as string;
-        if (cd) {
+        if (name === '') {
+            this.removeHeader('Content-Disposition');
+        } else if (cd) {
             this.setHeader('Content-Disposition',
                 cd.replace(Message.pullName, `$1${name}$3`));
         } else {
