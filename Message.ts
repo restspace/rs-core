@@ -630,7 +630,9 @@ export class Message {
         const hasData = (mimeType: string) => isJson(mimeType) || mimeType === 'application/x-www-form-urlencoded';
         // include object if there's data, it's json and it includes an object macro
         const specHasObjectMacro = spec.indexOf('${') >= 0 || spec.indexOf(' $this') >= 0;
-        if (this.data && this.data.mimeType && hasData(this.data.mimeType) && specHasObjectMacro) {
+        const specHasProperty = spec.split(' ').length === 3;
+        if (this.data && this.data.mimeType && hasData(this.data.mimeType)
+            && (specHasObjectMacro || specHasProperty)) {
             obj = await this.data.asJson();
         }
         const msgs = Message.fromSpec(spec, this.tenant, effectiveUrl || this.url, obj, defaultMethod, this.name, inheritMethod, headers);
@@ -776,10 +778,6 @@ export class Message {
         return msg;
     }
 
-    private static isUrl(url: string) {
-        return (Url.urlRegex.test(url) || url.startsWith('$')) && !url.startsWith('$this');
-    }
-
     private static isMethod(method: string) {
         return [ "GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "$METHOD" ].includes(method);
     }
@@ -791,13 +789,13 @@ export class Message {
         let method = defaultMethod || 'GET' as MessageMethod;
         let url = '';
         let postData: any = null;
-        if (Message.isUrl(parts[0]) && !Message.isMethod(parts[0])) {
+        if (parts.length === 1) {
             url = spec;
-        } else if (parts.length > 1 && Message.isUrl(parts[1]) && Message.isMethod(parts[0])) {
+        } else if (parts.length === 2 && Message.isMethod(parts[0])) {
             // $METHOD indicates use the method inherited from an outer message
             method = parts[0] === '$METHOD' ? (inheritMethod || method) : parts[0] as MessageMethod;
             url = parts.slice(1).join(' ');
-        } else if (parts.length > 2 && Message.isUrl(parts[2]) && Message.isMethod(parts[0]) && data) {
+        } else if (parts.length === 3 && Message.isMethod(parts[0]) && data) {
             method = parts[0] === '$METHOD' ? (inheritMethod || method) : parts[0] as MessageMethod;
             const propertyPath = parts[1];
             if (propertyPath === '$this') {

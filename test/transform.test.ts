@@ -92,7 +92,7 @@ Deno.test('this list', function () {
 Deno.test('this string', function () {
     const input = "hello";
     const transform = {
-        "a": "$this"
+        "a": "$"
     };
     const output = transformation(transform, input);
     assertEquals(output.a, "hello");

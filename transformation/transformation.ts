@@ -33,7 +33,7 @@ const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) =
 
 const doEvaluate = (expression: string, context: any, variables: Record<string, unknown>, helper: any) => {
     try {
-        return evaluate(expression, Object.assign({}, context, variables), helper);
+        return evaluate(expression, Object.assign({}, context), Object.assign({}, helper, variables));
     } catch (err) {
         throw SyntaxError('Transform failed', {
             cause: err,
@@ -49,13 +49,13 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         user: "getUrl(userUrl)" // does a GET on the url and inserts the JSON value as a result
     }
     */
-    //variables['$'] = data;
+    if (variables['$'] === undefined) variables['$'] = data;
     if (Array.isArray(data)) data = { ...data, length: data.length };
 
     const transformHelper = {
         Math: Math,
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
-            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name)),
+            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name, variables)),
         expressionReduce: (list: ArrayLike<any>, init: any, expression: string) => !list ? init : Array.from(list).reduce(
             (partial, item) => doEvaluate(expression, partial, variables, Object.assign({}, transformHelper, data, item)),
             init),
@@ -116,7 +116,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         if (transformObject.length === 0
             || typeof transformObject[0] !== 'string'
             || !transformObject[0].endsWith("()")) {
-                return transformObject.map(item => transformation(item, data, url, name));
+                return transformObject.map(item => transformation(item, data, url, name, variables));
         }
         const expr = arrayToFunction(transformObject, transformHelper);
         console.log('expr ' + expr);
@@ -192,7 +192,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
                 output[index] = shallowCopy(output[index]);
                 doTransformKey(remainingKey, 0, input, output[index], url, subTransform, name, variables);
             } else {
-                output[index] = shallowCopy(transformation(subTransform, input, url, name));
+                output[index] = shallowCopy(transformation(subTransform, input, url, name, variables));
             }
         }
 

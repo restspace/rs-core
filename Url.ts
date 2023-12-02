@@ -147,7 +147,7 @@ export class Url {
         this.path = urlParse[4];
         this._isDirectory = this.path.endsWith('/');
         const qs = urlParse[5];
-        this.queryString = qs ? decodeURI(qs.substr(1)) : '';
+        this.queryString = qs ? qs.substr(1) : '';
         const frag = urlParse[6];
         this.fragment = frag ? frag.substr(1) : '';
     }
