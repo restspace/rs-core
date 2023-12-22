@@ -1,10 +1,11 @@
 import { MessageBody } from "../MessageBody.ts";
 import { ItemMetadata } from "../ItemMetadata.ts";
+import { IAdapter } from "./IAdapter.ts";
 
 /**
- * Interface for reading/writing files to a filesystem.
+ * Adapter interface for reading/writing files to a filesystem.
  */
-export interface IFileAdapter {
+export interface IFileAdapter extends IAdapter {
     /**
      * Reads a file from a path.
      * @param {string} path - The path of the file.

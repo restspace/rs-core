@@ -31,9 +31,18 @@ const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) =
     return `${functionName}(${args.join(', ')})`;
 }
 
+const buildContext = (context: any): [ any, Record<string, unknown>] => {
+    if (Array.isArray(context) || !(typeof context === 'object')) {
+        return [ { $: context }, {} ];
+    }
+    const newContext = { ...context };
+    return [ newContext, { $: newContext } ];
+}
+
 const doEvaluate = (expression: string, context: any, variables: Record<string, unknown>, helper: any) => {
     try {
-        return evaluate(expression, Object.assign({}, context), Object.assign({}, helper, variables));
+        const [ newContext, newVariables ] = buildContext(context);
+        return evaluate(expression, newContext, Object.assign({}, helper, variables, newVariables));
     } catch (err) {
         throw SyntaxError('Transform failed', {
             cause: err,
@@ -49,7 +58,6 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         user: "getUrl(userUrl)" // does a GET on the url and inserts the JSON value as a result
     }
     */
-    if (variables['$'] === undefined) variables['$'] = data;
     if (Array.isArray(data)) data = { ...data, length: data.length };
 
     const transformHelper = {
@@ -124,12 +132,12 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         return arrResult;
     } else {
         let transformed: any = {};
-        const selfObject = transformObject['$this'] || transformObject['.'];
+        const selfObject = transformObject['$'] || transformObject['$this'] || transformObject['.'];
         if (selfObject) {
             transformed = shallowCopy(transformation(selfObject, data, url, name, variables));
         }
         for (let key in transformObject) {
-            if (key === '.' || key === '$this') continue;
+            if (key === '.' || key === '$this' || key === '$') continue;
             if (key.startsWith('$') && key.length > 1 && key !== '$key' && !key.startsWith('$$')) {
                 variables[key] = shallowCopy(transformation(transformObject[key], data, url, name, variables));
             } else {

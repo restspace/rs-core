@@ -11,6 +11,9 @@ import { AsyncQueue } from "./utility/asyncQueue.ts";
 import { ErrorObject, ValidateFunction } from "https://cdn.skypack.dev/ajv?dts";
 import { SimpleServiceContext } from "./ServiceContext.ts";
 
+/**
+ * List of headers which can be used in a response
+ */
 const sendHeaders: string[] = [
     "accept-ranges",
     "access-control-allow-origin",
@@ -65,6 +68,11 @@ const sendHeaders: string[] = [
     "x-xss-protection"
 ];
 
+/**
+ * Format a date for use in a header
+ * @param d - the date to format
+ * @returns the formatted date
+ */
 const headerDate = (d: Date) => {
     const leadingZ = (n: number) => n.toString().padStart(2, '0');
     const dayName = [ 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat' ][d.getUTCDay()];
@@ -77,13 +85,25 @@ const headerDate = (d: Date) => {
     return `${dayName}, ${day} ${month} ${year} ${hour}:${minute}:${second} GMT`;
 }
 
+/**
+ * Method of an HTTP message
+ */
 export type MessageMethod = "" | "GET" | "PUT" | "POST" | "DELETE" | "PATCH" | "OPTIONS" | "HEAD";
 
+/**
+ * Named sets of caching headers for different caching strategies
+ */
 export type CacheType = "none";
 
+/**
+ * An HTTP message (request or response)
+ */
 export class Message {
     cookies: { [key: string]: string } = {};
     context: { [key: string]: Record<string, unknown> } = {};
+    /**
+     * 
+     */
     depth = 0;
     conditionalMode = false; // whether the msg might be representing an error in conditional mode i.e. status 200, error in body
     authenticated = false;

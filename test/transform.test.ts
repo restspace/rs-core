@@ -259,7 +259,7 @@ Deno.test('convert object to list', function () {
         c: 3
     };
     const transform = {
-        "$this": "$this",
+        "$": "$",
         "[item]": "item.value"
     };
     const output = transformation(transform, input);
@@ -279,7 +279,7 @@ Deno.test('list multilevel', function () {
         }
     ];
     const transform = {
-        "$this": "$this",
+        "$": "$",
         "[item].val[subitem]": "subitem.value * 2"
     };
     const output = transformation(transform, input);
@@ -402,4 +402,17 @@ Deno.test('unique function', function () {
     const output = transformation(transform, input);
     console.log(JSON.stringify(output));
     assertEquals(output.length, 2);
+});
+
+Deno.test('transform expression function', function () {
+    const input = [ 1, 2, 3 ];
+    const transform = {
+        "$this": [
+            "expressionMap()",
+            "$this",
+            "$ * 2"
+        ]
+    };
+    const output = transformation(transform, input);
+    assertEquals(output, [ 2, 4, 6 ]);
 });
