@@ -65,7 +65,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
             !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name, variables)),
         expressionReduce: (list: ArrayLike<any>, init: any, expression: string) => !list ? init : Array.from(list).reduce(
-            (partial, item) => doEvaluate(expression, partial, variables, Object.assign({}, transformHelper, data, item)),
+            (previous, item) => doEvaluate(expression, item, variables, Object.assign({}, transformHelper, data, { '$previous': previous })),
             init),
         expressionReduce_expArgs: [2],
         expressionMap: (list: ArrayLike<any>, expression: string) => !list ? [] : Array.from(list).map(
@@ -171,7 +171,6 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         output[effectiveKey] = shallowCopy(transformation(subTransform, input, url, name, variables));
     } else if (match === '.') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
-        if (keyStart === 0 && !(keyPart in input)) return;
         if (!(keyPart in output)) {
             output[keyPart] = {};
         } else {

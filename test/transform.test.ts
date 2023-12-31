@@ -98,7 +98,7 @@ Deno.test('this string', function () {
     assertEquals(output.a, "hello");
 });
 
-Deno.test('path key', function () {
+Deno.test('path key existing', function () {
     const input = {
         a: "xyz",
         b: {
@@ -113,6 +113,17 @@ Deno.test('path key', function () {
     const output = transformation(transform, input);
     assertEquals(output.b.x, "zzz");
     assertEquals(output.b.y, "pqr");
+});
+
+Deno.test('path key new', function () {
+    const input = {
+        a: "xyz"
+    };
+    const transform = {
+        "b.x": "'zzz'"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.b.x, "zzz");
 });
 
 Deno.test('path key lvl 2', function () {
