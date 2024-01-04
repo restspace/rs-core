@@ -809,24 +809,27 @@ export class Message {
         let method = defaultMethod || 'GET' as MessageMethod;
         let url = '';
         let postData: any = null;
-        if (parts.length === 1) {
-            url = spec;
-        } else if (parts.length === 2 && Message.isMethod(parts[0])) {
-            // $METHOD indicates use the method inherited from an outer message
-            method = parts[0] === '$METHOD' ? (inheritMethod || method) : parts[0] as MessageMethod;
-            url = parts.slice(1).join(' ');
-        } else if (parts.length === 3 && Message.isMethod(parts[0]) && data) {
-            method = parts[0] === '$METHOD' ? (inheritMethod || method) : parts[0] as MessageMethod;
-            const propertyPath = parts[1];
-            if (propertyPath === '$this') {
-                postData = data;
-            } else {
-                postData = getProp(data, propertyPath);
-            }
-            url = parts.slice(2).join(' ');
+    
+        if (!Message.isMethod(parts[0])) {
+            url = spec.trim();
         } else {
-            console.error('bad req spec: ' + spec);
-            throw new Error('Bad request spec');
+            if (parts.length === 2 || parts[1].includes('/')) {
+                // $METHOD indicates use the method inherited from an outer message
+                method = parts[0] === '$METHOD' ? (inheritMethod || method) : parts[0] as MessageMethod;
+                url = parts.slice(1).join(' ');
+            } else if (data) {
+                method = parts[0] === '$METHOD' ? (inheritMethod || method) : parts[0] as MessageMethod;
+                const propertyPath = parts[1];
+                if (propertyPath === '$this') {
+                    postData = data;
+                } else {
+                    postData = getProp(data, propertyPath);
+                }
+                url = parts.slice(2).join(' ');
+            } else {
+                console.error('bad req spec: ' + spec);
+                throw new Error('Bad request spec');
+            }
         }
         if (referenceUrl || data) {
             const refUrl = referenceUrl || new Url('/');
