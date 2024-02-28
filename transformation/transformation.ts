@@ -51,6 +51,20 @@ const doEvaluate = (expression: string, context: any, variables: Record<string, 
     }
 }
 
+const groupBy = (list: any[], keyGetter: (item: any) => string) => {
+    const map = {} as Record<string, any[]>;
+    list.forEach((item) => {
+        const key = keyGetter(item);
+        const collection = map[key];
+        if (!collection) {
+            map[key] = [item];
+        } else {
+            collection.push(item);
+        }
+    });
+    return map;
+}
+
 export const transformation = (transformObject: any, data: any, url: Url = new Url('/'), name = '', variables = {} as Record<string, unknown>): any => {
     /*
     {
@@ -88,10 +102,10 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         expressionSort_expArgs: [1],
         unique: (list: ArrayLike<any>) => !list ? [] : Array.from(new Set(Array.from(list))),
         pathCombine,
-        // expressionGroup: (list: ArrayLike<any>, expression: string) => !list ? [] : groupBy(Array.from(list),
-        //     (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
-        // expressionGroup_expArgs: [1],
-        // merge: (obj0: object, ...objs: object[]) => merge(obj0, ...objs),
+        expressionGroup: (list: ArrayLike<any>, expression: string) => !list ? {} : groupBy(Array.from(list),
+             (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
+        expressionGroup_expArgs: [1],
+        merge: (...objs: object[]) => Object.assign({}, ...objs),
         pathPattern: (pattern: string, decode?: boolean) => 
             resolvePathPatternWithUrl(pattern, url, data, name, decode),
         newDate: (...args: any[]) => args.length === 0

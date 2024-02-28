@@ -427,3 +427,17 @@ Deno.test('transform expression function', function () {
     const output = transformation(transform, input);
     assertEquals(output, [ 2, 4, 6 ]);
 });
+
+Deno.test('groupBy function', function () {
+    const input = [
+        { a: 1, b: 2 },
+        { a: 1, b: 3 },
+        { a: 2, b: 4 }
+    ];
+    const transform = {
+        "$this": "expressionGroup($this, 'a')"
+    };
+    const output = transformation(transform, input);
+    console.log(JSON.stringify(output));
+    assertEquals(output, { 1: [ { a: 1, b: 2 }, { a: 1, b: 3 } ], 2: [ { a: 2, b: 4 } ] });
+});
