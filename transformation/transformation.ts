@@ -105,6 +105,12 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         expressionGroup: (list: ArrayLike<any>, expression: string) => !list ? {} : groupBy(Array.from(list),
              (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
         expressionGroup_expArgs: [1],
+        expressionMax: (list: ArrayLike<any>, expression: string) => !list ? {} : Math.max(...Array.from(list).map(
+            (item) => evaluate(expression, item, Object.assign({}, transformHelper, data)))),
+        expressionMax_expArgs: [1],
+        expressionMin: (list: ArrayLike<any>, expression: string) => !list ? {} : Math.min(...Array.from(list).map(
+            (item) => evaluate(expression, item, Object.assign({}, transformHelper, data)))),
+        expressionMin_expArgs: [1],
         merge: (...objs: object[]) => Object.assign({}, ...objs),
         pathPattern: (pattern: string, decode?: boolean) => 
             resolvePathPatternWithUrl(pattern, url, data, name, decode),
@@ -124,9 +130,6 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
                 return val;
             }),
         literal: (obj: Record<string, unknown>) => obj,
-        merge: (val0: any, val1: any) =>  {
-            return Object.assign({}, val0, val1);
-        },
         parseInt: (s: string, radix?: number) => parseInt(s, radix),
         parseFloat: (s: string) => parseFloat(s),
         uuid: () => crypto.randomUUID()

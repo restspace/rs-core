@@ -187,6 +187,19 @@ Deno.test('path object loop', function () {
     assertEquals(output.b, { a: 'a-1', b: 'b-2', c: 'c-3' });
 });
 
+Deno.test('path object/list loop', function () {
+    const input = {
+        a: "xyz",
+        b: { a: [ { a: 1 }, { a: 2 }, { a: 3 } ], b: [ { a: 4 }, { a: 5 }, { a: 6 } ] }
+    };
+    const transform = {
+        "$this": "$this",
+        "b{prop}.[item]": "a"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.b, { a: [ 1, 2, 3 ], b: [ 4, 5, 6 ] });
+});
+
 Deno.test('path array loop, not preexisting', function () {
     const input = {
         a: "xyz",
@@ -438,6 +451,16 @@ Deno.test('groupBy function', function () {
         "$this": "expressionGroup($this, 'a')"
     };
     const output = transformation(transform, input);
-    console.log(JSON.stringify(output));
     assertEquals(output, { 1: [ { a: 1, b: 2 }, { a: 1, b: 3 } ], 2: [ { a: 2, b: 4 } ] });
+});
+
+Deno.test('min/max functions', function () {
+    const input = [ 1, 2, 3 ];
+    const transform = {
+        "min": "expressionMin($this, '$this')",
+        "max": "expressionMax($this, '$this * 2')"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.min, 1);
+    assertEquals(output.max, 6);
 });
