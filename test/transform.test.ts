@@ -464,3 +464,14 @@ Deno.test('min/max functions', function () {
     assertEquals(output.min, 1);
     assertEquals(output.max, 6);
 });
+
+Deno.test('path function', function () {
+    const input = {
+        a: [ { x: 1 }, { x: 2 }, { x: 3 } ]
+    };
+    const transform = {
+        "lastx": "path('/a[last()]/x', $this)",
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.lastx, 3);
+});
