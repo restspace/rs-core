@@ -475,3 +475,24 @@ Deno.test('path function', function () {
     const output = transformation(transform, input);
     assertEquals(output.lastx, 3);
 });
+
+Deno.test('entity change function', function () {
+    const input = {
+        a: [
+            { id: 1, val: "hello" },
+            { id: 2, val: "goodbye" },
+            { id: 3, val: "same"}
+        ],
+        b: [
+            { id: 2, val: "bye bye" },
+            { id: 3, val: "same" },
+            { val: "hi"},
+            { val: "boo"}
+        ]
+    };
+    const transform = {
+        "changes": "entityChange(a, b, 'id')",
+    };
+    const output = transformation(transform, input);
+    console.log(output);
+});

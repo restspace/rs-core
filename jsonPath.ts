@@ -1,50 +1,59 @@
 import { evaluate } from 'https://cdn.skypack.dev/bcx-expression-evaluator?dts';
+import { scanFirst } from 'rs-core/utility/utility.ts';
+
+const applySelect = (val: any, prop?: string, filter?: string) => {
+    if (filter !== undefined && Array.isArray(val)) {
+        if (filter === '') return val;
+        const len = val.length;
+        if (len === 0) return [];
+        const context = {
+            last: () => len - 1
+        };
+        const indexVal = evaluate(filter, context);
+        if (typeof indexVal === 'number') return val[indexVal];
+        return val.filter(item => evaluate(filter, item, context));
+    } else if (prop !== undefined) {
+        if (prop === '') return val;
+        return Array.isArray(val) ? val.flatMap(item => item[prop]) : val[prop];
+    } else {
+        return undefined;
+    }
+};
 
 export const jsonPath = (obj: any, path: string): any => {
-    const parts = path.split('/').filter(p => !!p);
+    let pos = 0;
     let result = obj;
-    for (const part of parts) {
-        if (result === undefined) return undefined;
+    let mode = 'prop' as 'prop' | 'filter' | 'postFilter' | 'done';
+    path = path.startsWith('/') ? path.substring(1) : path;
 
-        const getPart = (val: any) => {
-            if (part.includes('[')) {
-                const exp = part.split('[')[1].split(']')[0];
-                val = val[part.split('[')[0]];
-                if (Array.isArray(val)) {
-                    if (val.length === 0) {
-                        return [];
-                    }
-                    const len = val.length;
-                    const context = {
-                        last: () => len - 1
-                    };
-                    const indexVal  = evaluate(exp, context);
-                    if (typeof indexVal === 'number') {
-                        val = val[indexVal];
-                    } else {
-                        const filtered = [];
-                        for (const item of val) {
-                            const condVal = evaluate(exp, item, context);
-                            if (condVal) {
-                                filtered.push(item);
-                            }
-                        }
-                        val = filtered
-                    }
-                } else {
-                    return undefined;
-                }
-            } else {
-                val = val[part];
+    do {
+        let prop: string | undefined = undefined;
+        let filter: string | undefined = undefined;
+        switch (mode) {
+            case 'prop':
+            case 'postFilter': {
+                const [matched, newPos] = scanFirst(path, pos, ['/', '.', '[']);
+                prop = path.slice(pos, newPos < 0 ? undefined : newPos - 1);
+                if (mode === 'postFilter' && Array.isArray(result)) result = result.flat(1);
+                mode = newPos < 0
+                    ? 'done'
+                    : path[newPos - 1] === '['
+                        ? 'filter'
+                        : 'prop';
+                pos = newPos;
+                break;
             }
-            return val;
+            case 'filter': {
+                const newPos = path.indexOf(']', pos);
+                filter = path.slice(pos, newPos);
+                mode = 'postFilter';
+                pos = newPos + 1;
+                break;
+            }
         }
 
-        if (Array.isArray(result)) {
-            result = result.map(getPart);
-        } else {
-            result = getPart(result);
-        }
-    }
+        result = applySelect(result, prop, filter);
+    } while (pos >= 0 && pos <= path.length);
+
     return result;
 }

@@ -53,6 +53,17 @@ Deno.test('array by index', function () {
     const output = jsonPath(input, path);
     assertEquals(output, 2);
 });
+Deno.test('dot separator', function () {
+    const input = {
+        a: 9,
+        b: {
+            c: [ 1, 2, 3 ]
+        }
+    };
+    const path = "b.c[1]";
+    const output = jsonPath(input, path);
+    assertEquals(output, 2);
+});
 Deno.test('array by last', function () {
     const input = {
         a: 9,
@@ -82,20 +93,45 @@ Deno.test('nested arrays', function () {
             c: [
                 {
                     e: 1,
-                    d: [ 1, 2, 3 ]
+                    d: [ { e: 1 }, { e: 2 }, { e: 3 } ]
                 },
                 {
                     e: 2,
-                    d: [ 4, 5, 6 ]
+                    d: [ { e: 4 }, { e: 5 }, { e: 6 } ]
                 },
                 {
                     e: 3,
-                    d: [ 7, 8, 9 ]
+                    d: [ { e: 7 }, { e: 8 }, { e: 9 } ]
                 }
             ]
         }
     };
-    const path = "/b/c[e >= 2]/d[$this > 5]";
+    const path = "/b/c[e >= 2]/d[e > 5]/e";
     const output = jsonPath(input, path);
-    assertEquals(output, [ [6], [7, 8, 9] ]);
+    assertEquals(output, [ 6, 7, 8, 9 ]);
+});
+Deno.test('multi-filter', function () {
+    const input = {
+        a: 9,
+        b: [
+            [
+                { e: 1 },
+                { e: 2 },
+                { e: 3 }
+            ],
+            [
+                { e: 4 },
+                { e: 5 },
+                { e: 6 }
+            ],
+            [
+                { e: 7 },
+                { e: 8 },
+                { e: 9 }
+            ]
+        ]
+    };
+    const path = "/b[][e > 3]/e";
+    const output = jsonPath(input, path);
+    assertEquals(output, [ 4, 5, 6, 7, 8, 9 ]);
 });

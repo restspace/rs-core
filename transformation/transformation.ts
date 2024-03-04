@@ -4,6 +4,7 @@ import { Url } from "../Url.ts";
 import { resolvePathPatternWithUrl } from "../PathPattern.ts";
 import { pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts";
 import { jsonPath } from 'rs-core/jsonPath.ts';
+import { entityChange } from 'rs-core/utility/utility.ts';
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
@@ -116,7 +117,9 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         pathPattern: (pattern: string, decode?: boolean) => 
             resolvePathPatternWithUrl(pattern, url, data, name, decode),
         path: (pathPattern: string, val: any, decode?: boolean) => jsonPath(val, resolvePathPatternWithUrl(pathPattern, url, data, name, decode) as string),
-        path_expArgs: [1],
+        entityChange: (from: ArrayLike<Record<string, any>>, to: ArrayLike<Record<string, any>>, idProp: string) => {
+            return entityChange(Array.from(from), Array.from(to), idProp);
+        },
         newDate: (...args: any[]) => args.length === 0
             ? new Date()
             : (args.length === 1
