@@ -478,22 +478,22 @@ export const applyOrMap = <T>(data: T | T[], func: (item: T) => T) => {
 
 export const entityChange = (entitiesFrom: Record<string, any>[], entitiesTo: Record<string, any>[], idProp: string) => {
     const result = {
-        create: [] as any[],
-        update: [] as any[],
-        delete: [] as any[]
+        created: [] as any[],
+        updated: [] as any[],
+        deleted: [] as any[]
     };
     for (const entityFrom of entitiesFrom) {
         const entityTo = entitiesTo.find((e: any) => e[idProp] === entityFrom[idProp]);
         if (!entityTo) {
-            result.delete.push(entityFrom);
+            result.deleted.push(entityFrom);
         } else if (!deepEqual(entityFrom, entityTo)) {
-            result.update.push(entityTo);
+            result.updated.push(entityTo);
         }
     }
     let maxId = null as number | null;
     for (const entityTo of entitiesTo) {
         if (entityTo[idProp] === undefined || !entitiesFrom.find((e: any) => e[idProp] === entityTo[idProp])) {
-            result.create.push(entityTo);
+            result.created.push(entityTo);
         }
         if (entityTo[idProp] === undefined) {
             if (maxId === null) {

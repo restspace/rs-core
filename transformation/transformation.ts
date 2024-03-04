@@ -46,7 +46,7 @@ const doEvaluate = (expression: string, context: any, variables: Record<string, 
         const [ newContext, newVariables ] = buildContext(context);
         return evaluate(expression, newContext, Object.assign({}, helper, variables, newVariables));
     } catch (err) {
-        throw SyntaxError('Transform failed', {
+        throw SyntaxError(`Transform failed in '${expression}'`, {
             cause: err,
             fileName: expression
         } as ErrorOptions);
