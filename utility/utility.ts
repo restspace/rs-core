@@ -196,12 +196,12 @@ const strategies = [ 'replace', 'append', 'prepend', 'positional', 'id-replace',
 
 function removePatchConfig(patchData: any): any {
     if (Array.isArray(patchData)) {
-        if (typeof patchData[0] === 'object' && '$strategy' in patchData[0] && strategies.includes(patchData[0].$strategy)) {
+        if (patchData[0] && typeof patchData[0] === 'object' && '$strategy' in patchData[0] && strategies.includes(patchData[0].$strategy)) {
             patchData.shift();
         }
         
         return patchData.map((item: any) => removePatchConfig(item));
-    } else if (typeof patchData === 'object') {
+    } else if (patchData && typeof patchData === 'object') {
         return Object.fromEntries(
             Object.entries(patchData).map(([k, v]) => [ k, removePatchConfig(v) ]));
     } else {
@@ -341,7 +341,7 @@ function isPrimitive(obj: any)
 
 export function shallowCopy(value: any) {
     if (Array.isArray(value)) return [ ...value ];
-    if (typeof value === 'object') return { ...value };
+    if (value && typeof value === 'object') return { ...value };
     return value;
 }
 
@@ -474,6 +474,18 @@ export const applyOrMap = <T>(data: T | T[], func: (item: T) => T) => {
     } else {
         return func(data);
     }
+}
+
+export function isArrayLike(item: any) {
+    return (
+        Array.isArray(item) || 
+        (!!item &&
+          typeof item === "object" &&
+          item.hasOwnProperty("length") && 
+          typeof item.length === "number" && 
+          (item.length === 0 || (item.length - 1) in item)
+        )
+    );
 }
 
 export const entityChange = (entitiesFrom: Record<string, any>[], entitiesTo: Record<string, any>[], idProp: string) => {

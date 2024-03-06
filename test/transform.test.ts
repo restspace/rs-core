@@ -476,6 +476,24 @@ Deno.test('path function', function () {
     assertEquals(output.lastx, 3);
 });
 
+Deno.test('path function 2', function () {
+    const input = [
+        {
+            a: [1, 9],
+            b: 2
+        },
+        {
+            a: [3, 5],
+            b: 4
+        }
+    ];
+    const transform = {
+        "lastx": "path('/a', $this)",
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.lastx, [ 1, 9, 3, 5 ]);
+});
+
 Deno.test('entity change function', function () {
     const input = {
         a: [

@@ -5,18 +5,20 @@ import { resolvePathPatternWithUrl } from "../PathPattern.ts";
 import { pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts";
 import { jsonPath } from 'rs-core/jsonPath.ts';
 import { entityChange } from 'rs-core/utility/utility.ts';
+import { isArrayLike } from 'rs-core/utility/utility.ts';
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
     let functionName = arr[0];
-    if (!functionName.endsWith('()')) return '';
+    if (typeof functionName !== 'string' || !functionName.endsWith('()')) return '';
     functionName = functionName.slice(0, -2);
     const args: string[] = [];
     for (let i = 1; i < arr.length; i++) {
         if (Array.isArray(arr[i])) {
             const arrayFunc = arrayToFunction(arr[i], transformHelper);
             if (arrayFunc) args.push(arrayFunc);
-        } else if (typeof arr[i] === 'object') {
+            args.push(JSON.stringify(arr[i]));
+        } else if (arr[i] && typeof arr[i] === 'object') {
             let objectStr = JSON.stringify(arr[i]);
             args.push(objectStr);
         } else if (typeof arr[i] === 'string') {
@@ -116,7 +118,10 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         merge: (...objs: object[]) => Object.assign({}, ...objs),
         pathPattern: (pattern: string, decode?: boolean) => 
             resolvePathPatternWithUrl(pattern, url, data, name, decode),
-        path: (pathPattern: string, val: any, decode?: boolean) => jsonPath(val, resolvePathPatternWithUrl(pathPattern, url, data, name, decode) as string),
+        path: (pathPattern: string, val: any, decode?: boolean) => {
+            if (isArrayLike(val)) val = Array.from(val);
+            return jsonPath(val, resolvePathPatternWithUrl(pathPattern, url, data, name, decode) as string);
+        },
         entityChange: (from: ArrayLike<Record<string, any>>, to: ArrayLike<Record<string, any>>, idProp: string) => {
             return entityChange(Array.from(from), Array.from(to), idProp);
         },
@@ -175,7 +180,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
 
 const rectifyObject = (obj: any) => {
     let newObj = obj;
-    if (typeof obj === 'object' && 'length' in obj && !Array.isArray(obj)) {
+    if (obj && typeof obj === 'object' && 'length' in obj && !Array.isArray(obj)) {
         newObj = Array.from(obj);
     }
 
@@ -233,7 +238,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
             let list = newOutput;
 
             if (!Array.isArray(newOutput) && !(typeof newOutput === 'object' && 'length' in newOutput)) {
-                if (typeof newOutput === 'object') {
+                if (newOutput && typeof newOutput === 'object') {
                     list = Object.entries(newOutput).map(([k, v]) => (
                         typeof v === 'object'
                         ? { ...(v as any), "$key": k }

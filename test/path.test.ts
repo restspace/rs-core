@@ -19,6 +19,22 @@ Deno.test('root', function () {
     const output = jsonPath(input, path);
     assertEquals(output, input);
 });
+Deno.test('single var on list', function () {
+    const input = [
+        {
+            a: [1, 9],
+            b: 2
+        },
+        {
+            a: [3, 5],
+            b: 4
+        }
+    ];
+    const path = "/a";
+    const output = jsonPath(input, path);
+    assertEquals(output, [ 1, 9, 3, 5 ]);
+});
+
 Deno.test('bad path', function () {
     const input = {
         a: 1,
@@ -27,6 +43,12 @@ Deno.test('bad path', function () {
     const path = "/x";
     const output = jsonPath(input, path);
     assertEquals(output, undefined);
+});
+Deno.test('bad path 2', function () {
+    const input: any[] = [];
+    const path = "/x";
+    const output = jsonPath(input, path);
+    assertEquals(output, []);
 });
 Deno.test('props', function () {
     const input = {
