@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assertEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { resolvePathPatternWithObject, resolvePathPattern, resolvePathPatternWithUrl } from '../PathPattern.ts';
 import { Url } from "../Url.ts";
 
@@ -7,6 +7,10 @@ Deno.test('matches a single path el', function () {
     assertEquals(res, 'a/qqq/b');
     res = resolvePathPattern("a/$<1/b", "/xyz/qqq/abc/nnn");
     assertEquals(res, 'a/abc/b');
+});
+Deno.test('missing single path el', function () {
+    let res = resolvePathPattern("a/$>1/b", "/xyz");
+    assertEquals(res, 'a/b')
 });
 Deno.test('matches a range', function () {
     let res = resolvePathPattern("a/$B<2<1/b", "/xyz/qqq/abc", "/lll/mmm/nnn/ppp");
@@ -39,6 +43,16 @@ Deno.test('works with no query and query subs', function () {
 Deno.test('matches a single prop correctly', function () {
     const res = resolvePathPatternWithObject("a/b/${prop}", { prop: 'def' }, [], '');
     assertEquals(res, 'a/b/def');
+});
+Deno.test('matches whole input correctly', function () {
+    const res = resolvePathPatternWithObject("a/b/${}", 'def', [], '');
+    assertEquals(res, 'a/b/def');
+});
+Deno.test('throws on insert empty string', function () {
+    assertThrows(() => resolvePathPatternWithObject("a/b/${}", '', [], ''));
+});
+Deno.test('throws on insert non-string', function () {
+    assertThrows(() => resolvePathPatternWithObject("a/b/${}", { a: 2 }, [], ''));
 });
 Deno.test('matches a terminal array correctly', function() {
     const res = resolvePathPatternWithObject("a/b/${prop[]}", { prop: [ 'cde', 'fgh' ] }, [], '');

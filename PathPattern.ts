@@ -99,7 +99,13 @@ function resolvePathPatternWithObjectInner(pathPattern: string, regex: RegExp, p
         const substitutions = enumeratedPaths.map((path) => {
             const val = path ? getProp(sourceObject, path) : sourceObject;
             if (val === undefined || val === null) {
-                throw new Error(`In path pattern, the data path '${path}' is not present in the data`);
+                throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is not present in the data`);
+            }
+            if (typeof val === 'object') {
+                throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is an object`)
+            }
+            if (val.toString() === '') {
+                throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is an empty string`)
             }
             return val.toString();
         });
@@ -112,7 +118,7 @@ function resolvePathPatternWithObjectInner(pathPattern: string, regex: RegExp, p
     }
 }
 
-export function resolvePathPatternWithObject(pathPattern: string, sourceObject: object, sourcePath: string[], currentPath: string, basePath?: string, subPath?: string, fullUrl?: string, query?: QueryStringArgs, name?: string, isDirectory?: boolean, decode?: boolean): string[] | string {
+export function resolvePathPatternWithObject(pathPattern: string, sourceObject: any, sourcePath: string[], currentPath: string, basePath?: string, subPath?: string, fullUrl?: string, query?: QueryStringArgs, name?: string, isDirectory?: boolean, decode?: boolean): string[] | string {
     const regex = /\${([\w\[\].]*)}/g;
     const partResolvedPattern = resolvePathPattern(pathPattern, currentPath, basePath, subPath, fullUrl, query, name, isDirectory, decode);
     const [ resolved, wasMultiplied ] = resolvePathPatternWithObjectInner(partResolvedPattern, regex, [ partResolvedPattern ], sourceObject, sourcePath);
