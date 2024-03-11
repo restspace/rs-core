@@ -118,6 +118,7 @@ export class Message {
     protected _data?: MessageBody;
     protected uninitiatedDataCopies: MessageBody[] = [];
     protected _headers: Record<string, string | string[]> = {};
+    protected _nullMessage = false;
     
     private static pullName = new RegExp(/([; ]name=["'])(.*?)(["'])/);
 
@@ -205,6 +206,14 @@ export class Message {
     get host(): string {
         const host = this.getHeader('Host');
         return host || '';
+    }
+
+    get nullMessage(): boolean {
+        return this._nullMessage;
+    }
+    set nullMessage(val: boolean) {
+        this._nullMessage = val;
+        if (val) this.data = undefined;
     }
 
     // private setMetadataFromHeaders(data: MessageBody) {
@@ -566,6 +575,11 @@ export class Message {
 
     setDateModified(dateModified: Date) {
         if (this.data) this.data.dateModified = dateModified;
+        return this;
+    }
+
+    setNullMessage(isNullMessage: boolean) {
+        this.nullMessage = isNullMessage;
         return this;
     }
 

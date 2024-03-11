@@ -48,6 +48,10 @@ Deno.test('matches whole input correctly', function () {
     const res = resolvePathPatternWithObject("a/b/${}", 'def', [], '');
     assertEquals(res, 'a/b/def');
 });
+Deno.test('handles empty list substitution', function () {
+    const res = resolvePathPatternWithObject("a/b/${[]}", [], [], '');
+    assertEquals(res, []);
+});
 Deno.test('throws on insert empty string', function () {
     assertThrows(() => resolvePathPatternWithObject("a/b/${}", '', [], ''));
 });
