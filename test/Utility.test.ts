@@ -71,16 +71,16 @@ Deno.test('patch list append', function() {
     assertEquals(patched, [ 1, 2, 3, 4, 5, 5 ]);
 });
 Deno.test('patch list prepend', function() {
-    const targ = [ 1, 2, 3, 4 ];
+    const targ = [ 0, 1, 2, 3, 4 ];
     const patchData = [ { '$strategy': 'prepend' }, 5, 5 ];
     const patched = patch(targ, patchData);
-    assertEquals(patched, [ 5, 5, 1, 2, 3, 4 ]);
+    assertEquals(patched, [ 5, 5, 0, 1, 2, 3, 4 ]);
 });
 Deno.test('patch list id-replace', function() {
     const targ = [ { name: 'a', val: 'xxx' }, { name: 'b', val: 'yyy' } ];
-    const patchData = [ { '$strategy': 'id-replace', '$id': 'name' }, { name: 'b', val: 'bbb' }, { name: 'c', val: 'ccc' } ];
+    const patchData = [ { '$strategy': 'id-replace', '$id': 'name' }, { name: 'b', val: 'bbb' }, { name: '', val: 'ccc' } ];
     const patched = patch(targ, patchData);
-    assertEquals(patched, [ { name: 'b', val: 'bbb' }, { name: 'c', val: 'ccc' } ]);
+    assertEquals(patched, [ { name: 'b', val: 'bbb' }, { name: '', val: 'ccc' } ]);
 });
 Deno.test('patch list id-patch', function() {
     const targ = [ { name: 'a', val: 'xxx' }, { name: 'b', val: 'yyy' } ];

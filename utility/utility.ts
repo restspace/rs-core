@@ -249,7 +249,7 @@ export function patch(target: any, patchData: any) {
             case 'id-replace': {
                 const newList = [] as any[];
                 patchData.forEach(val => {
-                    if (val[id]) {
+                    if (val[id] !== undefined) {
                         const targetItem = target.find(ti => ti[id] === val[id]);
                         if (targetItem) {
                             newList.push(patch(targetItem, val));
@@ -263,7 +263,7 @@ export function patch(target: any, patchData: any) {
             case 'id-patch': {
                 const newList = [ ...target ];
                 patchData.forEach(val => {
-                    if (val[id]) {
+                    if (val[id] !== undefined) {
                         const targetIdx = newList.findIndex(nl => nl[id] === val[id]);
                         if (targetIdx >= 0) {
                             newList[targetIdx] = patch(newList[targetIdx], val);
@@ -278,7 +278,7 @@ export function patch(target: any, patchData: any) {
     } else if (typeof patchData === "object") {
         if (Array.isArray(target) || !(typeof target === "object")) return removePatchConfig(patchData);
         for (const prop in patchData) {
-            if (target[prop]) {
+            if (target[prop] !== undefined) {
                 if (patchData[prop] === undefined) {
                     delete target[prop];
                 } else {
