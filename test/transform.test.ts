@@ -429,11 +429,13 @@ Deno.test('unique function', function () {
 });
 
 Deno.test('transform expression function', function () {
-    const input = [ 1, 2, 3 ];
+    const input = {
+        a: [ 1, 2, 3 ]
+    };
     const transform = {
         "$this": [
             "expressionMap()",
-            "$this",
+            "a",
             "$ * 2"
         ]
     };

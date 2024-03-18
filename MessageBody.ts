@@ -3,6 +3,7 @@ import { decodeURIComponentAndPlus, getProp } from "./utility/utility.ts";
 import { ab2b64, ab2str, str2ab } from "./utility/arrayBufferUtility.ts";
 import { stripBom } from "https://deno.land/x/string/mod.ts";
 import { readerFromStreamReader } from "https://deno.land/std@0.185.0/streams/reader_from_stream_reader.ts"
+import { jsonPath } from "rs-core/jsonPath.ts";
 
 export class MessageBody {
     statusCode = 0;
@@ -96,7 +97,7 @@ export class MessageBody {
     async extractPathIfJson(path: string) {
         if (!isJson(this.mimeType)) return;
         const val = await this.asJson();
-        this.data = str2ab(JSON.stringify(getProp(val, path)));
+        this.data = str2ab(JSON.stringify(jsonPath(val, path)));
     }
 
     isTextual() {
