@@ -1,5 +1,6 @@
 import { getProp, slashTrim } from "./utility/utility.ts";
 import { QueryStringArgs, Url } from "./Url.ts";
+import { jsonPath } from "rs-core/jsonPath.ts";
 
 function queryString(args?: QueryStringArgs) {
     return Object.entries((args || {}))
@@ -31,7 +32,7 @@ export function resolvePathPattern(pathPattern: string,
             if (section === 'S') parts = subPathParts;
             if (section === 'N') parts = nameParts;
             if (section === 'P') parts = fullPathParts;
-            let pos0 = parseInt(position0.substr(1));
+            let pos0 = parseInt(position0.substring(1));
             if (position0.startsWith('<')) pos0 = -pos0 - 1;
             let match: string | undefined = '';
             if (position1) {
@@ -85,33 +86,31 @@ function multiplyVariableSegments(currentSegments: string[], newSegment: string,
     });
 }
 
-function resolvePathPatternWithObjectInner(pathPattern: string, regex: RegExp, partialResolutions: string[], sourceObject: any, sourcePath: string[]): [ string[], boolean ] {
+function resolvePathPatternWithObjectInner2(pathPattern: string, regex: RegExp, partialResolutions: string[], sourceObject: any, sourcePath: string[]): [ string[], boolean ] {
     const match = regex.exec(pathPattern);
     if (match) {
         const path = match[1];
-        const pathConstantSegments = path.split('[]');
-        const isMultiplied = pathConstantSegments.length > 1;
-        const enumeratedPaths = pathConstantSegments.reduce<string[]>((result, seg) =>
-             result.length === 0
-             ? [ seg ]
-             : multiplyVariableSegments(result, seg, sourceObject),
-        []);
-        const substitutions = enumeratedPaths.map((path) => {
-            const val = path ? getProp(sourceObject, path) : sourceObject;
-            if (val === undefined || val === null) {
-                throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is not present in the data`);
-            }
-            if (typeof val === 'object') {
-                throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is an object`)
-            }
-            if (val.toString() === '') {
-                throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is an empty string`)
-            }
-            return val.toString();
-        });
+        let substitutions = jsonPath(sourceObject, path);
+        let isMultiplied = true;
+
+        if (!Array.isArray(substitutions)) {
+            substitutions = [ substitutions ];
+            isMultiplied = false;
+        }
         const newPartialResolutions = partialResolutions.flatMap((pr) =>
-            substitutions.map((subs) => pr.replace(new RegExp(regex.source), subs)));
-        const [ prs, wasMultiplied ] = resolvePathPatternWithObjectInner(pathPattern, regex, newPartialResolutions, sourceObject, sourcePath);
+            substitutions.map((subs: any) => {
+                if (subs === undefined || subs === null) {
+                    throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is not present in the data`);
+                }
+                if (typeof subs === 'object') {
+                    throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is an object`)
+                }
+                if (subs.toString() === '') {
+                    throw new Error(`In path pattern ${pathPattern}, the data path '${path}' is an empty string`)
+                }
+                return pr.replace(new RegExp(regex.source), subs.toString());
+            }));
+        const [ prs, wasMultiplied ] = resolvePathPatternWithObjectInner2(pathPattern, regex, newPartialResolutions, sourceObject, sourcePath);
         return [ prs, wasMultiplied || isMultiplied ];
     } else {
         return [ partialResolutions, false ];
@@ -119,8 +118,8 @@ function resolvePathPatternWithObjectInner(pathPattern: string, regex: RegExp, p
 }
 
 export function resolvePathPatternWithObject(pathPattern: string, sourceObject: any, sourcePath: string[], currentPath: string, basePath?: string, subPath?: string, fullUrl?: string, query?: QueryStringArgs, name?: string, isDirectory?: boolean, decode?: boolean): string[] | string {
-    const regex = /\${([\w\[\].]*)}/g;
+    const regex = /\${([^}]*)}/g;
     const partResolvedPattern = resolvePathPattern(pathPattern, currentPath, basePath, subPath, fullUrl, query, name, isDirectory, decode);
-    const [ resolved, wasMultiplied ] = resolvePathPatternWithObjectInner(partResolvedPattern, regex, [ partResolvedPattern ], sourceObject, sourcePath);
+    const [ resolved, wasMultiplied ] = resolvePathPatternWithObjectInner2(partResolvedPattern, regex, [ partResolvedPattern ], sourceObject, sourcePath);
     return wasMultiplied ? resolved : resolved[0];
 }

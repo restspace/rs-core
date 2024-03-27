@@ -10,6 +10,7 @@ import { IAuthUser } from "./user/IAuthUser.ts";
 import { AsyncQueue } from "./utility/asyncQueue.ts";
 import { ErrorObject, ValidateFunction } from "https://cdn.skypack.dev/ajv?dts";
 import { SimpleServiceContext } from "./ServiceContext.ts";
+import { jsonPath } from "rs-core/jsonPath.ts";
 
 /**
  * List of headers which can be used in a response
@@ -837,7 +838,7 @@ export class Message {
                 if (propertyPath === '$this') {
                     postData = data;
                 } else {
-                    postData = getProp(data, propertyPath);
+                    postData = jsonPath(data, propertyPath);
                 }
                 url = parts.slice(2).join(' ');
             } else {

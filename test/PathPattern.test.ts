@@ -74,6 +74,10 @@ Deno.test('multiplies by multiple array props', function () {
     const res = resolvePathPatternWithObject("a/b/${prop[]}/c/${prop2[]}", { prop: [ 'n', 'm' ], prop2: [ 'x', 'y' ] }, [], '');
     assertEquals(res, [ 'a/b/n/c/x', 'a/b/n/c/y', 'a/b/m/c/x', 'a/b/m/c/y' ]);
 });
+Deno.test('matches array using filter', function () {
+    const res = resolvePathPatternWithObject("a/b/${prop[$this % 2 === 0]}", { prop: [ 0, 1, 2, 3, 4 ]}, [], '');
+    assertEquals(res, [ 'a/b/0', 'a/b/2', 'a/b/4' ]);
+});
 Deno.test('decodes url segment', function () {
     const url = new Url("/abc/def%2Fghi");
     let res = resolvePathPatternWithUrl("$>1", url, undefined, undefined, true);
