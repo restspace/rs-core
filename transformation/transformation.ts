@@ -6,6 +6,7 @@ import { pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts
 import { jsonPath } from 'rs-core/jsonPath.ts';
 import { entityChange } from 'rs-core/utility/utility.ts';
 import { isArrayLike } from 'rs-core/utility/utility.ts';
+import { canonicaliseName } from 'rs-core/utility/utility.ts';
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
@@ -143,7 +144,8 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         literal: (obj: Record<string, unknown>) => obj,
         parseInt: (s: string, radix?: number) => parseInt(s, radix),
         parseFloat: (s: string) => parseFloat(s),
-        uuid: () => crypto.randomUUID()
+        uuid: () => crypto.randomUUID(),
+        canonicalise: (s: string, maxLength?: number) => canonicaliseName(s, maxLength),
     }
 
     if (typeof transformObject === 'string') {

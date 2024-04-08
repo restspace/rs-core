@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertStrictEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
-import { getProp, setProp, deleteProp, patch } from '../utility/utility.ts';
+import { getProp, setProp, deleteProp, patch, canonicaliseName } from '../utility/utility.ts';
 
 Deno.test('getProp from null', function () {
     assertThrows(() => {
@@ -100,6 +100,10 @@ Deno.test('patch list add list with patch config', function() {
     ];
     const patched = patch(targ, patchData);
     assertEquals(patched[1].val[0], 'nnn');
+});
+Deno.test('canonicalise name', function() {
+    const canon = canonicaliseName('Le-Carré Supplies', 12);
+    assertEquals(canon, 'lecarresuppl');
 });
 
 

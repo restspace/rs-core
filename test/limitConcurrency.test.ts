@@ -1,6 +1,7 @@
 import { assertEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 
 import { limitConcurrency } from '../utility/limitConcurrency.ts';
+import { ensureDelay } from '../utility/ensureDelay.ts';
 
 const wait = (ms: number, idx: number, results: number[]) => {
     return new Promise<void>(res => setTimeout(() => {
@@ -37,4 +38,18 @@ Deno.test('on at a time limit concurrency', async () => {
     const p2 = limit(() => wait(50, 3, results));
     await Promise.all([p0, p1, p2]);
     assertEquals(results, [1, 2, 3]);
+});
+
+Deno.test('delay', async () => {
+    const delay = ensureDelay(100, 0);
+    const results = [] as number[];
+    wait(120, 4, results);
+    wait(230, 5, results);
+    wait(280, 6, results);
+    const p0 = delay(() => wait(50, 1, results));
+    const p1 = delay(() => wait(50, 2, results));
+    const p2 = delay(() => wait(50, 3, results));
+    await Promise.all([p0, p1, p2]);
+    delay.clearTimeout();
+    assertEquals(results, [4, 1, 5, 2, 6, 3]);
 });

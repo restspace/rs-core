@@ -86,6 +86,17 @@ Deno.test('dot separator', function () {
     const output = jsonPath(input, path);
     assertEquals(output, 2);
 });
+Deno.test('quote escape', function () {
+    const input = {
+        a: 9,
+        b: {
+            'c[]': [ 1, 2, 3 ]
+        }
+    };
+    const path = 'b."c[]"[1]';
+    const output = jsonPath(input, path);
+    assertEquals(output, 2);
+});
 Deno.test('array by last', function () {
     const input = {
         a: 9,

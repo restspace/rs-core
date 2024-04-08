@@ -32,8 +32,18 @@ export const jsonPath = (obj: any, path: string): any => {
         switch (mode) {
             case 'prop':
             case 'postFilter': {
-                const [matched, newPos] = scanFirst(path, pos, ['/', '.', '[']);
+                let newPos: number;
+                let matched: string;
+                [matched, newPos] = scanFirst(path, pos, ['/', '.', '[', '"']);
+                if (matched === '"' && mode === 'prop') {
+                    pos = newPos;
+                    newPos = path.indexOf('"', pos);
+                    if (newPos > 0) newPos++;
+                }
                 prop = path.slice(pos, newPos < 0 ? undefined : newPos - 1);
+                if (matched === '"' && mode === 'prop') {
+                    [matched, newPos] = scanFirst(path, newPos, ['/', '.', '[']);
+                }
                 if (mode === 'postFilter' && Array.isArray(result)) result = result.flat(1);
                 mode = newPos < 0
                     ? 'done'

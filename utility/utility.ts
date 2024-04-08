@@ -384,6 +384,7 @@ export const resolveIfPath = (urlPath: string) => urlPath.startsWith('.') ? path
  * same position in str, it prefers the one which is listed first in searches.
  */
 export const scanFirst = (str: string, start: number, searches: string[]): [string, number] => {
+    if (start < 0) return [ "", -1 ];
     const matches: [number, number][] = [];
     for (let idx = start; idx < str.length; idx++) {
         for (let matchIdx = 0; matchIdx < matches.length; matchIdx++) {
@@ -516,4 +517,12 @@ export const entityChange = (entitiesFrom: Record<string, any>[], entitiesTo: Re
         }
     }
     return result;
+}
+
+export const canonicaliseName = (name: string, maxLength?: number) => {
+    const canonical = name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[^a-z0-9]/gu, '');
+    return maxLength ? canonical.substr(0, maxLength) : canonical;
 }
