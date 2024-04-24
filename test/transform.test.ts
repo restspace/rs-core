@@ -1,5 +1,6 @@
 import { assert, assertEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
+import { VariableScope } from '../VariableScope.ts'; // Replace 'path/to/VariableScope' with the actual path to the VariableScope module
 
 Deno.test('single var', function () {
     const input = {
@@ -400,9 +401,9 @@ Deno.test('variables set', function () {
         "$this": "$this",
         "$xyz": "a[2].z"
     };
-    const variables = {} as Record<string, unknown>;
+    const variables = new VariableScope({});
     const _output = transformation(transform, input, undefined, undefined, variables);
-    assertEquals(variables.$xyz, 3);
+    assertEquals(variables.get('$xyz'), 3);
 });
 Deno.test('variables use', function () {
     const input = {
@@ -413,7 +414,7 @@ Deno.test('variables use', function () {
         "$xyz": "a[2].z",
         "$$val": "$xyz * 2"
     };
-    const variables = {} as Record<string, unknown>;
+    const variables = new VariableScope({});
     const output = transformation(transform, input, undefined, undefined, variables);
     assertEquals(output.$val, 6);
 });

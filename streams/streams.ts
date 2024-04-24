@@ -45,9 +45,11 @@ export async function* toBlockChunks(stringItbl: AsyncIterable<string>) {
     yield buffer.slice(0, pointer);
 }
 
-export async function* toLines(stringItbl: AsyncIterable<string>) {
-    const iterator = stringItbl[Symbol.asyncIterator]();
-    let {value: chunk, done: readerDone} = await iterator.next()
+export async function* toLines(stringItbl: AsyncIterable<Uint8Array>) {
+    const iterator = stringItbl[Symbol.asyncIterator]() as AsyncIterator<Uint8Array, Uint8Array, Uint8Array>;
+    let {value: binChunk, done: readerDone} = await iterator.next();
+    const decoder = new TextDecoder();
+    let chunk = decoder.decode(binChunk);
   
     const re = /\r\n|\n|\r/gm;
     let startIndex = 0;
@@ -58,9 +60,9 @@ export async function* toLines(stringItbl: AsyncIterable<string>) {
         if (readerDone) {
           break;
         }
-        const remainder = chunk.substr(startIndex);
+        const remainder = chunk.substring(startIndex);
         const nextResult = await iterator.next();
-        chunk = nextResult.value;
+        chunk = decoder.decode(nextResult.value);
         readerDone = nextResult.done;
         
         chunk = remainder + (chunk || "");
@@ -72,7 +74,7 @@ export async function* toLines(stringItbl: AsyncIterable<string>) {
     }
     if (startIndex < chunk.length) {
       // last line didn't end in a newline char
-      yield chunk.substr(startIndex);
+      yield chunk.substring(startIndex);
     }
   }
 

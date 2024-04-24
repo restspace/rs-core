@@ -351,8 +351,9 @@ export function getProp(object: any, path: string[] | string, defaultVal?: any):
     if (!path.length) {
       return object === undefined ? defaultVal : object
     }
-  
-    return getProp(object[path.shift() as string], path, defaultVal)
+    const [head, ...tail] = path;
+
+    return getProp(object[head], tail, defaultVal)
 }
 
 export function deleteProp(object: any, path: string[] | string) {

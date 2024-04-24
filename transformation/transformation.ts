@@ -7,6 +7,8 @@ import { jsonPath } from 'rs-core/jsonPath.ts';
 import { entityChange } from 'rs-core/utility/utility.ts';
 import { isArrayLike } from 'rs-core/utility/utility.ts';
 import { canonicaliseName } from 'rs-core/utility/utility.ts';
+import { stripHtmlTags } from 'rs-core/utility/html.ts';
+import { VariableScope } from 'rs-core/VariableScope.ts';
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
@@ -70,7 +72,7 @@ const groupBy = (list: any[], keyGetter: (item: any) => string) => {
     return map;
 }
 
-export const transformation = (transformObject: any, data: any, url: Url = new Url('/'), name = '', variables = {} as Record<string, unknown>): any => {
+export const transformation = (transformObject: any, data: any, url: Url = new Url('/'), name = '', variableScope = new VariableScope({})): any => {
     /*
     {
         transfList: "transformMap(origList, { x: y + 1 })" // takes origList and applies transform object to map x to y + 1
@@ -78,11 +80,12 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
     }
     */
     if (Array.isArray(data)) data = { ...data, length: data.length };
+    const variables = variableScope.getVariables();
 
     const transformHelper = {
         Math: Math,
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
-            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name, variables)),
+            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name, variableScope)),
         expressionReduce: (list: ArrayLike<any>, init: any, expression: string) => !list ? init : Array.from(list).reduce(
             (previous, item) => doEvaluate(expression, item, variables, Object.assign({}, transformHelper, data, { '$previous': previous })),
             init),
@@ -141,11 +144,16 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
                 (val as any)[keyProp || '$key'] = key;
                 return val;
             }),
+        objectEntries: (obj: Record<string, unknown>) => Object.entries(obj),
         literal: (obj: Record<string, unknown>) => obj,
         parseInt: (s: string, radix?: number) => parseInt(s, radix),
         parseFloat: (s: string) => parseFloat(s),
         uuid: () => crypto.randomUUID(),
         canonicalise: (s: string, maxLength?: number) => canonicaliseName(s, maxLength),
+        stripHtml: (s: string, sepPWithNewline?: boolean) => {
+            const stripped = stripHtmlTags(s, sepPWithNewline);
+            return stripped;
+        },
     }
 
     if (typeof transformObject === 'string') {
@@ -154,7 +162,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         if (transformObject.length === 0
             || typeof transformObject[0] !== 'string'
             || !transformObject[0].endsWith("()")) {
-                return transformObject.map(item => transformation(item, data, url, name, variables));
+                return transformObject.map(item => transformation(item, data, url, name, variableScope));
         }
         const expr = arrayToFunction(transformObject, transformHelper);
         console.log('expr ' + expr);
@@ -164,16 +172,16 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         let transformed: any = {};
         const selfObject = transformObject['$'] || transformObject['$this'] || transformObject['.'];
         if (selfObject) {
-            transformed = shallowCopy(transformation(selfObject, data, url, name, variables));
+            transformed = shallowCopy(transformation(selfObject, data, url, name, variableScope));
         }
         for (let key in transformObject) {
             if (key === '.' || key === '$this' || key === '$') continue;
             if (key.startsWith('$') && key.length > 1 && key !== '$key' && !key.startsWith('$$')) {
-                variables[key] = shallowCopy(transformation(transformObject[key], data, url, name, variables));
+                variableScope.set(key, shallowCopy(transformation(transformObject[key], data, url, name, variableScope)));
             } else {
                 let keyStart = 0;
                 if (key.startsWith('$$') && key.length > 2) keyStart = 1;
-                doTransformKey(key, keyStart, data, transformed, url, transformObject[key], name, variables);
+                doTransformKey(key, keyStart, data, transformed, url, transformObject[key], name, variableScope);
             }
         }
         return rectifyObject(transformed);
@@ -194,11 +202,11 @@ const rectifyObject = (obj: any) => {
 // elsewhere in the output which would make the update affect multiple points on the property
 // tree of the output, so we copy the output tree shallowly each time we follow a segment of the
 // property path
-const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any, name: string, variables: Record<string, unknown>) => {
+const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any, name: string, variableScope: VariableScope) => {
     let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
     if (newKeyStart < 0) {
         const effectiveKey = key.slice(keyStart);
-        output[effectiveKey] = shallowCopy(transformation(subTransform, input, url, name, variables));
+        output[effectiveKey] = shallowCopy(transformation(subTransform, input, url, name, variableScope));
     } else if (match === '.') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim();
         if (!(keyPart in output)) {
@@ -207,7 +215,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
             output[keyPart] = shallowCopy(output[keyPart]);
         }
         console.log(`recursing path, new start: ${newKeyStart}, new output: ${JSON.stringify(output[keyPart])}`);
-        doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform, name, variables);
+        doTransformKey(key, newKeyStart, input, output[keyPart], url, subTransform, name, variableScope);
     } else if (match === '[' || match === '{') {
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim(); // the property key before the array
         let newOutput = output;
@@ -227,9 +235,9 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         const transformOrRecurse = (input: any, index: number | string, output: any) => {
             if (remainingKey) {
                 output[index] = shallowCopy(output[index]);
-                doTransformKey(remainingKey, 0, input, output[index], url, subTransform, name, variables);
+                doTransformKey(remainingKey, 0, input, output[index], url, subTransform, name, variableScope);
             } else {
-                output[index] = shallowCopy(transformation(subTransform, input, url, name, variables));
+                output[index] = shallowCopy(transformation(subTransform, input, url, name, variableScope));
             }
         }
 

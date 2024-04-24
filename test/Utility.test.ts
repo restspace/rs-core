@@ -1,5 +1,6 @@
 import { assert, assertEquals, assertStrictEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { getProp, setProp, deleteProp, patch, canonicaliseName } from '../utility/utility.ts';
+import { stripHtmlTags } from '../utility/html.ts';
 
 Deno.test('getProp from null', function () {
     assertThrows(() => {
@@ -11,8 +12,10 @@ Deno.test('getProp string', function () {
     assertStrictEquals(v, 'y');
 });
 Deno.test('getProp array', function () {
-    const v = getProp([ { a: 1, b: 2}, true, true ], [ '0', 'a' ]);
+    const path = [ '0', 'a' ];
+    const v = getProp([ { a: 1, b: 2}, true, true ], path);
     assertStrictEquals(v, 1);
+    assertEquals(path, [ '0', 'a' ]);
 });
 Deno.test('setProp empty', function () {
     const v = {} as any;
@@ -104,6 +107,10 @@ Deno.test('patch list add list with patch config', function() {
 Deno.test('canonicalise name', function() {
     const canon = canonicaliseName('Le-Carré Supplies', 12);
     assertEquals(canon, 'lecarresuppl');
+});
+Deno.test('html strip p to newline', function() {
+    const stripped = stripHtmlTags('<p></p><p>hello</p><p>goodbye</p>', true);
+    assertEquals(stripped, '\nhello\ngoodbye');
 });
 
 
