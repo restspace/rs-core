@@ -7,15 +7,14 @@ import { Url } from "./Url.ts";
 import * as log from "https://deno.land/std@0.185.0/log/mod.ts";
 import { Source } from "./Source.ts";
 
-export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, context: SimpleServiceContext, config: unknown) => Promise<T>;
+export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, context: BaseContext, config: unknown) => Promise<T>;
 
-export interface SimpleServiceContext {
+export interface BaseContext {
     tenant: string;
     prePost?: PrePost;
     makeRequest: (msg: Message, source?: Source) => Promise<Message>;
     runPipeline: (msg: Message, pipelineSpec: PipelineSpec, contextUrl?: Url, concurrencyLimit?: number) => Promise<Message>;
     logger: log.Logger;
-    manifest: IServiceManifest;
     getAdapter: <T extends IAdapter>(url: string, config: unknown) => Promise<T>;
     makeProxyRequest?: (msg: Message) => Promise<Message>;
     state: StateFunction;
@@ -24,12 +23,16 @@ export interface SimpleServiceContext {
     tracestate?: string; // standard tracing header
 }
 
+export interface SimpleServiceContext extends BaseContext {
+    manifest: IServiceManifest;
+}
+
 export interface ServiceContext<TAdapter extends IAdapter> extends SimpleServiceContext {
     adapter: TAdapter;
 }
 
 export class BaseStateClass {
-    load(_context: SimpleServiceContext, _config: unknown) {
+    load(_context: BaseContext, _config: unknown) {
         return Promise.resolve();
     }
     unload(newState?: BaseStateClass) {
@@ -39,7 +42,7 @@ export class BaseStateClass {
 
 export type StateClass<T extends BaseStateClass> = new() => T;
 
-export type AdapterContext = Omit<SimpleServiceContext, "manifest">;
+export type AdapterContext = BaseContext;
 
 export const nullState = <T>(_cons: new() => T) => {
     throw new Error('State not set');

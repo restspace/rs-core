@@ -1,7 +1,8 @@
 import { evaluate } from 'https://cdn.skypack.dev/bcx-expression-evaluator?dts';
-import { scanFirst } from 'rs-core/utility/utility.ts';
+import { scanFirst } from './utility/utility.ts';
 
 const applySelect = (val: any, prop?: string, filter?: string) => {
+    if (val === undefined) return undefined;
     if (filter !== undefined && Array.isArray(val)) {
         if (filter === '') return val;
         const len = val.length;

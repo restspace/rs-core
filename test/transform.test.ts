@@ -270,7 +270,7 @@ Deno.test('transform a list', function () {
         }
     ];
     const transform = {
-        "$this": "$this",
+        "$": "$",
         "[item]": { a: "a" }
     };
     const output = transformation(transform, input);

@@ -1,6 +1,6 @@
 import { Message } from "../Message.ts";
 import { assertEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
-import { Url } from "rs-core/Url.ts";
+import { Url } from "../Url.ts";
 
 Deno.test('GET encode/decode to array', async function () {
     const msg = new Message("/abc", "test", "GET", null);

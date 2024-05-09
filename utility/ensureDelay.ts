@@ -1,4 +1,4 @@
-import { ArrayQueue } from "rs-core/utility/asyncQueue.ts";
+import { ArrayQueue } from "./asyncQueue.ts";
 
 export type Delayer = ((fn: () => Promise<any>) => Promise<any>) & { pendingCount: number, clearQueue: () => void, clearTimeout: () => void };
 

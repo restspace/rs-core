@@ -1,6 +1,6 @@
 import { getProp, slashTrim } from "./utility/utility.ts";
 import { QueryStringArgs, Url } from "./Url.ts";
-import { jsonPath } from "rs-core/jsonPath.ts";
+import { jsonPath } from "./jsonPath.ts";
 
 function queryString(args?: QueryStringArgs) {
     return Object.entries((args || {}))

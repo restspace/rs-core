@@ -40,7 +40,7 @@ Deno.test('bad path', function () {
         a: 1,
         b: 2
     };
-    const path = "/x";
+    const path = "/x/y";
     const output = jsonPath(input, path);
     assertEquals(output, undefined);
 });

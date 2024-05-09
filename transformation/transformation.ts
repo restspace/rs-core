@@ -3,12 +3,10 @@ import dayjs from "https://cdn.skypack.dev/dayjs@1.10.4";
 import { Url } from "../Url.ts";
 import { resolvePathPatternWithUrl } from "../PathPattern.ts";
 import { pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts";
-import { jsonPath } from 'rs-core/jsonPath.ts';
-import { entityChange } from 'rs-core/utility/utility.ts';
-import { isArrayLike } from 'rs-core/utility/utility.ts';
-import { canonicaliseName } from 'rs-core/utility/utility.ts';
-import { stripHtmlTags } from 'rs-core/utility/html.ts';
-import { VariableScope } from 'rs-core/VariableScope.ts';
+import { jsonPath } from '../jsonPath.ts';
+import { entityChange, isArrayLike, canonicaliseName } from '../utility/utility.ts';
+import { stripHtmlTags } from '../utility/html.ts';
+import { VariableScope } from '../VariableScope.ts';
 
 const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) => {
     if (arr.length === 0) return '';
