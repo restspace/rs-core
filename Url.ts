@@ -1,5 +1,5 @@
+import { resolvePathPatternWithUrl } from "rs-core/PathPattern.ts";
 import { slashTrim, pathCombine, decodeURIComponentAndPlus, last, arrayEqual, pathToArray } from "./utility/utility.ts";
-import { resolvePathPatternWithUrl } from "./PathPattern.ts";
 
 export type QueryStringArgs = Record<string, string[]>;
 
@@ -192,17 +192,33 @@ export class Url {
         return this;
     }
 
-    follow(relativeUrl: string) {
+    follow(relativeUrl: Url | string) {
         const newUrl = this.copy();
         if (!relativeUrl) return newUrl;
-        for (const part of relativeUrl.split('/')) {
-            if (part === '..') {
+        const followUrl = new Url(relativeUrl);
+        if (!followUrl.isRelative) {
+            if (!followUrl.domain) {
+                followUrl.domain = this.domain;
+                followUrl.scheme = this.scheme;
+            }
+            return followUrl;
+        }
+        for (const el of followUrl.pathElements) {
+            if (el === '..') {
                 newUrl.pathElements.pop();
-            } else if (part && part !== '.') {
-                newUrl.pathElements.push(part);
+            } else if (el && el !== '.') {
+                newUrl.pathElements.push(el);
             }
         }
-        newUrl._isDirectory = relativeUrl.endsWith('/');
+        if (!relativeUrl.toString().startsWith('#') && relativeUrl !== '.') {
+            newUrl.queryString = followUrl.queryString;
+        }
+        if (relativeUrl !== '.') {
+            newUrl.fragment = followUrl.fragment;
+        }
+        if (followUrl.pathElements.length > 0 && relativeUrl !== '.') {
+            newUrl._isDirectory = followUrl._isDirectory;
+        }
         return newUrl;
     }
 

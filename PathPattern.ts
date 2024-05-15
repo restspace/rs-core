@@ -49,7 +49,7 @@ export function resolvePathPattern(pathPattern: string,
     }
 
     const result = pathPattern
-        .replace('$*', currentPath + (isDirectory ? "/" : "") + fullQueryString(query))
+        .replace('$*', currentPath + (isDirectory && !currentPath.endsWith('/') ? "/" : "") + fullQueryString(query))
         .replace('$$', encodeURIComponent(fullUrl || ''))
         .replace('$P*', fullPathParts.join('/') + (isDirectory ? "/" : "") + fullQueryString(query))
         .replace('$N*', name || '')

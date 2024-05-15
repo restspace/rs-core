@@ -38,7 +38,7 @@ Deno.test('creates a url correctly from a host with root', function () {
     assert(url.isDirectory);
     assert(!url.isRelative);
 });
-Deno.test('fails on relative path', () => {
+Deno.test('relative path', () => {
     const url = new Url('abc/def');
     assertEquals(url.path, 'abc/def');
     assert(url.isRelative);
@@ -50,6 +50,12 @@ Deno.test('root domain', () => {
 Deno.test('query string', () => {
     const url = new Url('/?abc=def');
     assertEquals(url.query['abc'][0], 'def');
+});
+Deno.test('relative query string', () => {
+    const url = new Url('?abc=def');
+    assertEquals(url.query['abc'][0], 'def');
+    assertEquals(url.toString(), '?abc=def');
+    assert(url.isRelative);
 });
 Deno.test('query string on root domain', () => {
     const url = new Url('http://spot.com?bn1=yyy');
@@ -64,6 +70,12 @@ Deno.test('full url', () => {
     assertEquals(url.query['abc'][0], 'def');
     assertEquals(url.fragment, '123');
     assert(!url.isRelative);
+});
+Deno.test('relative fragment', () => {
+    const url = new Url('#xyz');
+    assertEquals(url.fragment, 'xyz');
+    assertEquals(url.toString(), '#xyz');
+    assert(url.isRelative);
 });
 Deno.test('copy abs', () => {
     const url = new Url('http://spot.com/abc/def?mno=pqr&abc=def#123');
@@ -99,4 +111,39 @@ Deno.test('subtitution syntax legal', () => {
     const url = new Url('/abc/def${ghi}?mno=pqr&abc=def#123');
     assertEquals(url.pathElements[1], 'def${ghi}');
     assertEquals(url.toString(), '/abc/def${ghi}?mno=pqr&abc=def#123');
+});
+Deno.test('follow simple relative', () => {
+    const url = new Url('/abc/def?mno=pqr&abc=def#123');
+    const followUrl = url.follow('xxx');
+    assertEquals(followUrl.toString(), '/abc/def/xxx');
+});
+Deno.test('follow abs is abs', () => {
+    const url = new Url('/abc/def?mno=pqr&abc=def#123');
+    const followUrl = url.follow('http://spot.com/xxx');
+    assertEquals(followUrl.toString(), 'http://spot.com/xxx');
+});
+Deno.test('follow up one', () => {
+    const url = new Url('/abc/def?mno=pqr&abc=def#123');
+    const followUrl = url.follow('../xxx');
+    assertEquals(followUrl.toString(), '/abc/xxx');
+});
+Deno.test('follow query string', () => {
+    const url = new Url('/abc/def?mno=pqr&abc=def#123');
+    const followUrl = url.follow('?mno=stu');
+    assertEquals(followUrl.toString(), '/abc/def?mno=stu');
+});
+Deno.test('follow fragment', () => {
+    const url = new Url('/abc/def?mno=pqr&abc=def#123');
+    const followUrl = url.follow('#456');
+    assertEquals(followUrl.toString(), '/abc/def?mno=pqr&abc=def#456');
+});
+Deno.test('follow dir no change', () => {
+    const url = new Url('/abc/def/?mno=pqr&abc=def#123');
+    const followUrl = url.follow('#456');
+    assertEquals(followUrl.toString(), '/abc/def/?mno=pqr&abc=def#456');
+});
+Deno.test('follow dir change', () => {
+    const url = new Url('/abc/def/?mno=pqr&abc=def#123');
+    const followUrl = url.follow('../xxx');
+    assertEquals(followUrl.toString(), '/abc/xxx');
 });

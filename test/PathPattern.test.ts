@@ -12,6 +12,14 @@ Deno.test('missing single path el', function () {
     let res = resolvePathPattern("a/$>1/b", "/xyz");
     assertEquals(res, 'a/b')
 });
+Deno.test('convert to site relative', function () {
+    let res = resolvePathPattern("/a/$>1/b", "/xyz");
+    assertEquals(res, '/a/b')
+});
+Deno.test('attach query string', function () {
+    let res = resolvePathPattern("$*?x=1", "abc.com/xyz/");
+    assertEquals(res, 'abc.com/xyz/?x=1');
+});
 Deno.test('matches a range', function () {
     let res = resolvePathPattern("a/$B<2<1/b", "/xyz/qqq/abc", "/lll/mmm/nnn/ppp");
     assertEquals(res, 'a/mmm/nnn/b');
@@ -84,4 +92,9 @@ Deno.test('decodes url segment', function () {
     assertEquals(res, 'def/ghi');
     res = resolvePathPatternWithUrl("$>1", url);
     assertEquals(res, 'def%2Fghi');
+});
+Deno.test('with url, directory', function () {
+    const url = new Url("/abc/def/");
+    let res = resolvePathPatternWithUrl("/$*?x=1", url);
+    assertEquals(res, '/abc/def/?x=1');
 });
