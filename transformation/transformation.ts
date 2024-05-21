@@ -166,7 +166,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         console.log('expr ' + expr);
         const arrResult = doEvaluate(expr, data, variables, transformHelper);
         return arrResult;
-    } else {
+    } else if (typeof transformObject === 'object') {
         let transformed: any = {};
         const selfObject = transformObject['$'] || transformObject['$this'] || transformObject['.'];
         if (selfObject) {
@@ -183,6 +183,8 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
             }
         }
         return rectifyObject(transformed);
+    } else {
+        return transformObject;
     }
 }
 

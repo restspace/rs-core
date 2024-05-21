@@ -13,6 +13,23 @@ Deno.test('single var', function () {
     const output = transformation(transform, input);
     assertEquals(output.q, 1);
 });
+Deno.test('primitives non string', function () {
+    const input = {
+        a: 1,
+        b: 2
+    };
+    const transform = {
+        q: "a",
+        r: 2,
+        s: {
+            t: true
+        }
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.q, 1);
+    assertEquals(output.r, 2);
+    assertEquals(output.s.t, true);
+});
 Deno.test('parseInt', function () {
     const input = {
         a: 1,
