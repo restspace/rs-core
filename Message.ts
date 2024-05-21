@@ -367,7 +367,7 @@ export class Message {
         const isForbidden = (h: string) => this.forbiddenHeaders.includes(h)
             || h.startsWith('proxy-')
             || h.startsWith('sec-')
-            || (!this.data && h.startsWith('content-'));
+            || ((!this.data || [ "GET", "HEAD" ].includes(this.method)) && h.startsWith('content-'));
 
         return Object.fromEntries(Object.entries(this.headers)
             .filter(([k, _]) => !isForbidden(k)));
