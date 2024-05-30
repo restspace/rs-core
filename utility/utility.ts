@@ -44,6 +44,17 @@ export function pathCombine(...args: string[]): string {
     return joined;
 }
 
+export function basePathToNonPrivate(basePath: string): string {
+    const basePathParts = basePath.split('/');
+    let i = basePathParts.length - 1;
+    for (; i >= 0; i--) {
+        if (!basePathParts[i].startsWith('*')) {
+            break;
+        }
+    }
+    return basePathParts.slice(0, i + 1).join('/');
+}
+
 export function arrayToStringPath(path: string[]): string {
     const sPath = path.reduce((res, el) => isNaN(Number(el)) ? `${res}.${el}` : `${res}[${el}]`, '');
     return sPath.startsWith('.') ? sPath.substr(1) : sPath;

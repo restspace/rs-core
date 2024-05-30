@@ -11,6 +11,7 @@ export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, cont
 
 export interface BaseContext {
     tenant: string;
+    primaryDomain: string;
     prePost?: PrePost;
     makeRequest: (msg: Message, source?: Source) => Promise<Message>;
     runPipeline: (msg: Message, pipelineSpec: PipelineSpec, contextUrl?: Url, concurrencyLimit?: number) => Promise<Message>;
@@ -38,7 +39,18 @@ export class BaseStateClass {
     unload(newState?: BaseStateClass) {
         return Promise.resolve();
     }
-} 
+}
+
+export class MultiStateClass<S extends BaseStateClass, C> extends BaseStateClass {
+    states: Record<string, S> = {};
+
+    substate(key: string, cons: new(config: C) => S, config: C) {
+        if (!this.states[key]) {
+            this.states[key] = new cons(config);
+        }
+        return this.states[key];
+    }
+}
 
 export type StateClass<T extends BaseStateClass> = new() => T;
 

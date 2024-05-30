@@ -19,7 +19,7 @@ export async function* limitBytes(itbl: AsyncIterable<Uint8Array>, limit: number
 }
 
 export async function* toBlockChunks(stringItbl: AsyncIterable<string>) {
-    const buffer = new Uint8Array(BUF_SIZE);
+    let buffer = new Uint8Array(BUF_SIZE);
     let pointer = 0;
     const encoder = new TextEncoder();
 
@@ -35,6 +35,7 @@ export async function* toBlockChunks(stringItbl: AsyncIterable<string>) {
             bytesRemaining = bytes.length - start;
             pointer = 0;
             bufferRemaining = BUF_SIZE - pointer;
+            buffer = new Uint8Array(BUF_SIZE);
         }
         if (bytesRemaining > 0) {
             buffer.set(bytes.slice(start), pointer);

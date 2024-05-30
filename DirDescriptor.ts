@@ -1,4 +1,7 @@
-export type ApiPattern = "store" | "transform" | "store-transform" | "view" | "operation" | "directory";
+import { ManualMimeTypes } from "rs-core/IServiceConfig.ts";
+
+export type StorePattern = "store" | "store-transform" | "store-view" | "store-operation" | "store-directory";
+export type ApiPattern = StorePattern | "transform" | "view" | "operation" | "directory";
 
 export interface StoreDetails {
     storeMimeTypes: string[],
@@ -10,6 +13,14 @@ export interface StoreDetails {
 export interface TransformDetails {
     reqMimeType: string,
     respMimeType: string
+}
+
+export interface ViewDetails {
+    respMimeType: string
+}
+
+export interface OperationDetails {
+    reqMimeType: string
 }
 
 /**
@@ -38,17 +49,23 @@ export interface StoreTransformSpec extends StoreDetails, TransformDetails {
 /**
  * A view is a resource which returns data to a GET request only
  */
-export interface ViewSpec {
-    pattern: "view",
-    respMimeType: string
+export interface ViewSpec extends ViewDetails {
+    pattern: "view"
+}
+
+export interface StoreViewSpec extends StoreDetails, ViewDetails {
+    pattern: "store-view"
 }
 
 /**
  * An operation is a resource to which you POST or PUT data which takes an action but does not return data
  */
-export interface OperationSpec {
-    pattern: "operation",
-    reqMimeType: string
+export interface OperationSpec extends OperationDetails {
+    pattern: "operation"
+}
+
+export interface StoreOperationSpec extends StoreDetails, OperationDetails {
+    pattern: "store-operation"
 }
 
 /**
@@ -58,7 +75,16 @@ export interface DirectorySpec {
     pattern: "directory",
 }
 
-export type ApiSpec = StoreSpec | TransformSpec | StoreTransformSpec | ViewSpec | OperationSpec | DirectorySpec;
+export interface StoreDirectorySpec extends StoreDetails {
+    pattern: "store-directory"
+}
+
+export type AnyStoreSpec = StoreSpec | StoreTransformSpec | StoreViewSpec | StoreOperationSpec | StoreDirectorySpec;
+
+export type ApiSpec = AnyStoreSpec | TransformSpec
+    | ViewSpec
+    | OperationSpec
+    | DirectorySpec;
 
 export type PathInfo = [ name: string, dateModified?: number, mimeType?: string, writeMimeType?: string ]
                        | [ name: string, dateModified?: number, spec?: ApiSpec ];
@@ -67,4 +93,50 @@ export interface DirDescriptor {
     path: string;
     paths: PathInfo[];
     spec?: ApiSpec;
+}
+
+export const storeDescriptor = (storePattern: StorePattern, createDirectory: boolean, createFiles: boolean, storeMimeTypes: string[], transformMimeTypes?: ManualMimeTypes) => {
+    let spec: AnyStoreSpec;
+    const storeProps = {
+        storeMimeTypes,
+        createDirectory,
+        createFiles
+    };
+    switch (storePattern) {
+        case "store-transform":
+            spec = {
+                pattern: "store-transform",
+                ...storeProps,
+                reqMimeType: transformMimeTypes?.requestMimeType,
+                respMimeType: transformMimeTypes?.responseMimeType
+            } as StoreTransformSpec;
+            break;
+        case "store-directory":
+            spec = {
+                pattern: "store-directory",
+                ...storeProps
+            } as StoreDirectorySpec;
+            break;
+        case "store-operation":
+            spec = {
+                pattern: "store-operation",
+                ...storeProps,
+                reqMimeType: transformMimeTypes?.requestMimeType
+            } as StoreOperationSpec;
+            break;
+        case "store-view":
+            spec = {
+                pattern: "store-view",
+                ...storeProps,
+                respMimeType: transformMimeTypes?.responseMimeType
+            } as StoreViewSpec;
+            break;
+        default:
+            spec = {
+                pattern: "store",
+                ...storeProps
+            } as StoreSpec;
+            break;
+    }
+    return spec;
 }

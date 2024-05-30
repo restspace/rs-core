@@ -143,8 +143,8 @@ export class Url {
 
         this.scheme = urlParse[2];
         this.domain = urlParse[3];
-        this.isRelative = (!this.domain && urlParse[1] !== '/');
         this.path = urlParse[4];
+        this.isRelative = (!this.domain && urlParse[1] !== '/');
         this._isDirectory = this.path.endsWith('/');
         const qs = urlParse[5];
         this.queryString = qs ? qs.substr(1) : '';
@@ -176,7 +176,8 @@ export class Url {
     }
 
     baseUrl() {
-        return `${this.scheme || ''}${this.domain || ''}/${this.basePathElements.join('/')}`;
+        const nonLocalBasePathElements = this.basePathElements.filter(el => !el.startsWith('*'));
+        return `${this.scheme || ''}${this.domain || ''}/${nonLocalBasePathElements.join('/')}`;
     }
 
     /** Sets the subpath url based on the provided servicePathUrl, which is an absolute or site-relative url
