@@ -28,7 +28,7 @@ export class MessageBody {
         return this.data instanceof ReadableStream;
     }
 
-    constructor(public data: ArrayBuffer | ReadableStream | null, public mimeType: string = "text/plain", size?: number, public dateModified?: Date, public filename?: string) {
+    constructor(public data: ArrayBuffer | ReadableStream<Uint8Array> | null, public mimeType: string = "text/plain", size?: number, public dateModified?: Date, public filename?: string) {
         this._size = size;
     }
 
@@ -131,7 +131,7 @@ export class MessageBody {
         return this.data as ArrayBuffer;
     }
 
-    asReadable(): ReadableStream | null {
+    asReadable(): ReadableStream<Uint8Array> | null {
         if (this.data === null) return null;
         if (this.data instanceof ReadableStream) return this.data;
         return new Response(this.data).body;

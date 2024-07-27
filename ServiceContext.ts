@@ -22,6 +22,7 @@ export interface BaseContext {
     metadataOnly?: boolean;
     traceparent?: string; // standard tracing header
     tracestate?: string; // standard tracing header
+    registerAbortAction: (msg: Message, action: () => void) => void;
 }
 
 export interface SimpleServiceContext extends BaseContext {

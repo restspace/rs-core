@@ -217,6 +217,11 @@ export class Message {
         if (val) this.data = undefined;
     }
 
+    get traceId(): string {
+        const traceparent = this.getHeader('traceparent') || '';
+        return traceparent.split('-')[1] || '';
+    }
+
     // private setMetadataFromHeaders(data: MessageBody) {
     //     if (this._headers['content-type'] && !data.mimeType) {
     //         data.setMimeType(this._headers['content-type'] as string);
