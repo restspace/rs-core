@@ -17,3 +17,19 @@ export const assignProperties = (schema: Record<string, unknown>, schema2: Recor
     }
     return newSchema;
 }
+
+export const stripUndefined = (value: any): any => {
+    if (Array.isArray(value)) {
+        return value.map(stripUndefined);
+    } else if (typeof value === 'object' && value !== null) {
+        const newValue: Record<string, unknown> = {};
+        for (const key in value) {
+            if (value[key] !== undefined) {
+                newValue[key] = stripUndefined(value[key]);
+            }
+        }
+        return newValue;
+    } else {
+        return value;
+    }
+}

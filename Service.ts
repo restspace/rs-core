@@ -3,12 +3,13 @@ import { IServiceConfig } from "./IServiceConfig.ts";
 import { Message } from "./Message.ts";
 import { longestMatchingPath, PathMap } from "./PathMap.ts";
 import { Url } from "./Url.ts";
-import Ajv, { Schema } from "https://cdn.skypack.dev/ajv?dts";
+import { validator, Schema } from "https://cdn.skypack.dev/@exodus/schemasafe?dts";
 import { getErrors } from "./utility/errors.ts";
 import { BaseStateClass, ServiceContext } from "./ServiceContext.ts";
 import { DirDescriptor, PathInfo } from "./DirDescriptor.ts";
 import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
 import { after } from "./utility/utility.ts";
+import { isJson } from "./mimeType.ts";
 
 export type ServiceFunction<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> =
     (msg: Message, context: ServiceContext<TAdapter>, config: TConfig) => Message | Promise<Message>;
@@ -17,7 +18,7 @@ export enum AuthorizationType {
     none, read, write, create
 }
 
-const ajv = new Ajv({ allErrors: true, strictSchema: false, allowUnionTypes: true });
+const defaultValidator = (schema: any) => validator(schema, { includeErrors: true, allErrors: true, allowUnusedKeywords: true });
 
 export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> {
     /** Returns a Service which returns every message unchanged */
@@ -146,11 +147,15 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     setMethodPath(method: string, path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) {
         if (!path.startsWith('/')) path = '/' + path;
         if (schema) {  
-            const validator = ajv.compile(schema);
+            const validate = defaultValidator(schema);
             const innerFunc = func;
             func = async (msg, context, config) => {
-                if (!(await msg.validate(validator))) {
-                    return msg.setStatus(400, getErrors(validator));
+                if (!msg.data || !isJson(msg.data.mimeType)) {
+                    return msg.setStatus(400, 'No data provided');
+                }
+                const data = await msg.data.asJson();
+                if (!(validate(data))) {
+                    return msg.setStatus(400, getErrors(validate));
                 } else {
                     return innerFunc(msg, context, config);
                 }

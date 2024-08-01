@@ -1,4 +1,4 @@
-import { assert, assertEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assert, assertEquals, assertStrictEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { Url } from '../Url.ts';
 
 Deno.test('sets service path correctly', function () {
@@ -37,6 +37,20 @@ Deno.test('creates a url correctly from a host with root', function () {
     const url = new Url('http://abc.com/');
     assert(url.isDirectory);
     assert(!url.isRelative);
+});
+Deno.test('creates a url correctly from a service with dir', function () {
+    const url = new Url('http://abc.com/service/');
+    assert(url.isDirectory);
+    assert(!url.isRelative);
+    assertEquals(url.servicePath, 'service/');
+    assertEquals(url.servicePathElements, ['service']);
+});
+Deno.test('creates a url correctly from a service without dir', function () {
+    const url = new Url('http://abc.com/service');
+    assert(!url.isDirectory);
+    assert(!url.isRelative);
+    assertEquals(url.servicePath, 'service');
+    assertEquals(url.servicePathElements, ['service']);
 });
 Deno.test('relative path', () => {
     const url = new Url('abc/def');

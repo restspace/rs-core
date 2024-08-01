@@ -1,4 +1,4 @@
-import Ajv from "https://cdn.skypack.dev/ajv?dts";
+import { validator } from "https://cdn.skypack.dev/@exodus/schemasafe?dts";
 
 export type PipelineSpec = (string | Record<string, unknown> | PipelineSpec)[];
 
@@ -14,11 +14,11 @@ export const pipelineSchema = {
     }
 };
 
-export const pipelineValidate = new Ajv({ strictSchema: false, allowUnionTypes: true }).compile(Object.assign({
+export const pipelineValidate = validator(Object.assign({
     definitions: {
         pipeline: pipelineSchema
     }
-}, pipelineSchema));
+}, pipelineSchema), { includeErrors: true, allErrors: true, allowUnusedKeywords: true });
 
 export const pipelineConcat = (pipeline0?: PipelineSpec, pipeline1?: PipelineSpec) => {
     if (pipeline0 || pipeline1) {

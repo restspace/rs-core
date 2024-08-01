@@ -8,7 +8,6 @@ import { ab2str, str2ab } from "./utility/arrayBufferUtility.ts";
 import { after, getProp, upTo, upToLast } from "./utility/utility.ts";
 import { IAuthUser } from "./user/IAuthUser.ts";
 import { AsyncQueue } from "./utility/asyncQueue.ts";
-import { ErrorObject, ValidateFunction } from "https://cdn.skypack.dev/ajv?dts";
 import { SimpleServiceContext } from "./ServiceContext.ts";
 import { jsonPath } from "./jsonPath.ts";
 
@@ -705,21 +704,6 @@ export class Message {
             }
         }
         return datas;
-    }
-
-    async validate(validator: ValidateFunction) {
-        if (!this.data || !isJson(this.data.mimeType)) {
-            validator.errors = [ {
-                keyword: "",
-                instancePath: "",
-                schemaPath: "",
-                params: {},
-                message: "The body was not JSON"
-            } as ErrorObject ];
-            return false;
-        }
-        const json = await this.data.asJson();
-        return validator(json);
     }
 
     /** Not proper HTTP/1.1 as body is always base 64 */
