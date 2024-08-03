@@ -1,4 +1,4 @@
-import { resolvePathPatternWithUrl } from "rs-core/PathPattern.ts";
+import { resolvePathPatternWithUrl } from "./PathPattern.ts";
 import { slashTrim, pathCombine, decodeURIComponentAndPlus, last, arrayEqual, pathToArray } from "./utility/utility.ts";
 
 export type QueryStringArgs = Record<string, string[]>;
@@ -114,6 +114,9 @@ export class Url {
 
     get servicePathElements(): string[] {
         return this.pathElements.slice(this.basePathElementCount);
+    }
+    set servicePathElements(els: string[]) {
+        this.pathElements = [ ...this.basePathElements, ...els ];
     }
 
     subPathElementCount = null as number | null;
