@@ -1,4 +1,4 @@
-import { ManualMimeTypes } from "rs-core/IServiceConfig.ts";
+import { ManualMimeTypes } from "./IServiceConfig.ts";
 
 export type StorePattern = "store" | "store-transform" | "store-view" | "store-operation" | "store-directory";
 export type ApiPattern = StorePattern | "transform" | "view" | "operation" | "directory";

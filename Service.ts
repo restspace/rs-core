@@ -3,7 +3,7 @@ import { IServiceConfig } from "./IServiceConfig.ts";
 import { Message } from "./Message.ts";
 import { longestMatchingPath, PathMap } from "./PathMap.ts";
 import { Url } from "./Url.ts";
-import { validator, Schema } from "https://cdn.skypack.dev/@exodus/schemasafe?dts";
+import { validator, Schema, Validate } from "https://cdn.skypack.dev/@exodus/schemasafe?dts";
 import { getErrors } from "./utility/errors.ts";
 import { BaseStateClass, ServiceContext } from "./ServiceContext.ts";
 import { DirDescriptor, PathInfo } from "./DirDescriptor.ts";
@@ -144,28 +144,43 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         }
     }
 
-    setMethodPath(method: string, path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) {
+    setMethodPath(method: string, path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema, mimeTypes?: string[]) {
         if (!path.startsWith('/')) path = '/' + path;
+        let validate: Validate;
         if (schema) {  
-            const validate = defaultValidator(schema);
-            const innerFunc = func;
-            func = async (msg, context, config) => {
-                if (!msg.data || !isJson(msg.data.mimeType)) {
-                    return msg.setStatus(400, 'No data provided');
-                }
-                const data = await msg.data.asJson();
-                if (!(validate(data))) {
-                    return msg.setStatus(400, getErrors(validate));
-                } else {
-                    return innerFunc(msg, context, config);
-                }
-            };
+            validate = defaultValidator(schema);
             if (this.schemas[method]) {
                 this.schemas[method][path] = schema;
             } else {
                 this.schemas[method] = { [path]: schema };
             }
         }
+        const innerFunc = func;
+        func = async (msg, context, config) => {
+            if (!schema && !mimeTypes) {
+                return innerFunc(msg, context, config);
+            }
+            // func has builtin validation
+            if (!msg.data) {
+                return msg.setStatus(400, 'No data provided');
+            }
+            const mimeIsJson = isJson(msg.data.mimeType);
+            const jsonAndSchema = schema && mimeIsJson;
+            // if a schema is given assume any json is allowed
+            if (mimeTypes && !jsonAndSchema && !mimeTypes.some(mimeType => msg.data!.mimeType.startsWith(mimeType))) {
+                return msg.setStatus(415, 'Unsupported Media Type');
+            }
+            if (!mimeTypes && schema && !mimeIsJson) {
+                return msg.setStatus(415, 'JSON required');
+            }
+            if (jsonAndSchema) {
+                const data = await msg.data.asJson();
+                if (!(validate(data))) {
+                    return msg.setStatus(400, getErrors(validate));
+                }
+            }
+            return innerFunc(msg, context, config);
+        };
         if (this.methodFuncs[method]) {
             this.methodFuncs[method][path] = func;
         } else {
@@ -204,10 +219,12 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     
 
     /** Handle all POST method messages at or under the configured base path using the supplied ServiceFunction */
-    post = (func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('post', '/', func, schema);
+    post = (func: ServiceFunction<TAdapter, TConfig>, schema?: Schema, mimeTypes?: string[]) =>
+        this.setMethodPath('post', '/', func, schema, mimeTypes);
 
     /** Handle POST method messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
-    postPath = (path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('post', path, func, schema);
+    postPath = (path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema, mimeTypes?: string[]) =>
+        this.setMethodPath('post', path, func, schema, mimeTypes);
     
     /** Handle all POST method messages to a directory (i.e. url ends with '/') at or under the configured base path using the supplied ServiceFunction */
     postDirectory = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('postDirectory', '/', func);
@@ -217,10 +234,12 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
 
 
     /** Handle all PUT method messages at or under the configured base path using the supplied ServiceFunction */
-    put = (func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('put', '/', func, schema);
+    put = (func: ServiceFunction<TAdapter, TConfig>, schema?: Schema, mimeTypes?: string[]) =>
+        this.setMethodPath('put', '/', func, schema, mimeTypes);
 
     /** Handle PUT method messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
-    putPath = (path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema) => this.setMethodPath('put', path, func, schema);
+    putPath = (path: string, func: ServiceFunction<TAdapter, TConfig>, schema?: Schema, mimeTypes?: string[]) =>
+        this.setMethodPath('put', path, func, schema, mimeTypes);
 
     /** Handle all PUT method messages to a directory (i.e. url ends with '/') at or under the configured base path using the supplied ServiceFunction */
     putDirectory = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('putDirectory', '/', func);
