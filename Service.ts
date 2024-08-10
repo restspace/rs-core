@@ -78,6 +78,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         }
         context.traceparent = msg?.getHeader('traceparent') || undefined;
         context.tracestate = msg?.getHeader('tracestate') || undefined;
+        context.user = msg?.user?.email || undefined;
         return context;
     }
 

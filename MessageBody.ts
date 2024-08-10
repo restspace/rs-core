@@ -105,7 +105,7 @@ export class MessageBody {
     }
 
     /** returns the body as a UTF8 string for text or json, otherwise base 64 encoded */
-    async asString() {
+    async asString(): Promise<string | null> {
         if (this.data === null) return null;
         let enc = 'base64';
         let str: string;

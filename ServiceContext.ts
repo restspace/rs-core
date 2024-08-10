@@ -22,7 +22,22 @@ export interface BaseContext {
     metadataOnly?: boolean;
     traceparent?: string; // standard tracing header
     tracestate?: string; // standard tracing header
+    user?: string;
     registerAbortAction: (msg: Message, action: () => void) => void;
+}
+
+export function contextLoggerArgs(context: BaseContext) {
+    let traceId = 'x'.repeat(32);
+    let spanId = 'x'.repeat(16);
+    const traceparent = context.traceparent;
+    if (traceparent) {
+        const parts = traceparent.split('-');
+        if (parts.length >= 3) {
+            traceId = parts[1];
+            spanId = parts[2];
+        }
+    }
+    return [ context.tenant, context.user || '?', traceId, spanId ];
 }
 
 export interface SimpleServiceContext extends BaseContext {
