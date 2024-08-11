@@ -152,6 +152,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
             const stripped = stripHtmlTags(s, sepPWithNewline);
             return stripped;
         },
+        regexp: (s: string, flags?: string) => new RegExp(s, flags),
     }
 
     if (typeof transformObject === 'string') {
