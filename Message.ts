@@ -630,7 +630,7 @@ export class Message {
         return this;
     }
 
-    loggerArgs() {
+    loggerArgs(service?: string) {
         let traceId = 'x'.repeat(32);
         let spanId = 'x'.repeat(16);
         const traceparent = this.getHeader('traceparent');
@@ -641,7 +641,7 @@ export class Message {
                 spanId = parts[2];
             }
         }
-        return [ this.tenant, this.user?.email || '?', traceId, spanId ];
+        return [ this.tenant, service || '?', this.user?.email || '?', traceId, spanId ];
     }
 
     async requestExternal(): Promise<Message> {

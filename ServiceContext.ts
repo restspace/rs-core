@@ -6,8 +6,19 @@ import { PipelineSpec } from "./PipelineSpec.ts";
 import { Url } from "./Url.ts";
 import * as log from "https://deno.land/std@0.185.0/log/mod.ts";
 import { Source } from "./Source.ts";
+import { GenericFunction } from "https://deno.land/std@0.185.0/log/logger.ts";
+import { BaseHandler } from "https://deno.land/std@0.185.0/log/handlers.ts";
 
 export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, context: BaseContext, config: unknown) => Promise<T>;
+
+export interface WrappedLogger {
+    critical: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
+    error: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
+    warning: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
+    info: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
+    debug: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
+    handlers: BaseHandler[];
+}
 
 export interface BaseContext {
     tenant: string;
@@ -15,7 +26,8 @@ export interface BaseContext {
     prePost?: PrePost;
     makeRequest: (msg: Message, source?: Source) => Promise<Message>;
     runPipeline: (msg: Message, pipelineSpec: PipelineSpec, contextUrl?: Url, concurrencyLimit?: number) => Promise<Message>;
-    logger: log.Logger;
+    logger: WrappedLogger;
+    baseLogger: log.Logger;
     getAdapter: <T extends IAdapter>(url: string, config: unknown) => Promise<T>;
     makeProxyRequest?: (msg: Message) => Promise<Message>;
     state: StateFunction;
@@ -23,6 +35,7 @@ export interface BaseContext {
     traceparent?: string; // standard tracing header
     tracestate?: string; // standard tracing header
     user?: string;
+    serviceName?: string;
     registerAbortAction: (msg: Message, action: () => void) => void;
 }
 
@@ -37,7 +50,28 @@ export function contextLoggerArgs(context: BaseContext) {
             spanId = parts[2];
         }
     }
-    return [ context.tenant, context.user || '?', traceId, spanId ];
+    return [ context.tenant, context.serviceName, context.user || '?', traceId, spanId ];
+}
+
+export function createWrappedLogger(context: BaseContext): WrappedLogger {
+    const critical = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
+        context.baseLogger.critical(msg, ...contextLoggerArgs(context), ...args);
+    const error = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
+        context.baseLogger.error(msg, ...contextLoggerArgs(context), ...args);
+    const warning = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
+        context.baseLogger.warning(msg, ...contextLoggerArgs(context), ...args);
+    const info = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
+        context.baseLogger.info(msg, ...contextLoggerArgs(context), ...args);
+    const debug = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
+        context.baseLogger.debug(msg, ...contextLoggerArgs(context), ...args);
+    return {
+        critical,
+        error,
+        warning,
+        info,
+        debug,
+        handlers: context.baseLogger.handlers
+    };
 }
 
 export interface SimpleServiceContext extends BaseContext {

@@ -5,7 +5,7 @@ import { longestMatchingPath, PathMap } from "./PathMap.ts";
 import { Url } from "./Url.ts";
 import { validator, Schema, Validate } from "https://cdn.skypack.dev/@exodus/schemasafe?dts";
 import { getErrors } from "./utility/errors.ts";
-import { BaseStateClass, ServiceContext } from "./ServiceContext.ts";
+import { BaseStateClass, createWrappedLogger, ServiceContext } from "./ServiceContext.ts";
 import { DirDescriptor, PathInfo } from "./DirDescriptor.ts";
 import { IProxyAdapter } from "./adapter/IProxyAdapter.ts";
 import { after } from "./utility/utility.ts";
@@ -79,6 +79,8 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         context.traceparent = msg?.getHeader('traceparent') || undefined;
         context.tracestate = msg?.getHeader('tracestate') || undefined;
         context.user = msg?.user?.email || undefined;
+        context.serviceName = config.name;
+        context.logger = createWrappedLogger(context);
         return context;
     }
 
