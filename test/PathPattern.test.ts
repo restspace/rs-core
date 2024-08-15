@@ -10,11 +10,15 @@ Deno.test('matches a single path el', function () {
 });
 Deno.test('missing single path el', function () {
     let res = resolvePathPattern("a/$>1/b", "/xyz");
-    assertEquals(res, 'a/b')
+    assertEquals(res, 'a//b')
+});
+Deno.test('missing multiple path el', function () {
+    let res = resolvePathPattern("a/$>1/b/$>2", "/xyz");
+    assertEquals(res, 'a//b/')
 });
 Deno.test('convert to site relative', function () {
     let res = resolvePathPattern("/a/$>1/b", "/xyz");
-    assertEquals(res, '/a/b')
+    assertEquals(res, '/a//b')
 });
 Deno.test('attach query string', function () {
     let res = resolvePathPattern("$*?x=1", "abc.com/xyz/");

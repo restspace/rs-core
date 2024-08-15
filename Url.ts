@@ -226,6 +226,12 @@ export class Url {
         return newUrl;
     }
 
+    stripPrivateServices() {
+        const newUrl = this.copy();
+        newUrl.pathElements = newUrl.pathElements.filter(el => !el.startsWith('*'));
+        return newUrl;
+    }
+
     static urlRegex = /^((https?:\/\/)([^?#\/]+)|\/)?([^?#]*)(\?[^#]*)?(#.*)?$/;
 
     static fromPath(path: string): Url {

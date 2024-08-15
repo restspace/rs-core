@@ -211,11 +211,11 @@ Deno.test('path object/list loop', function () {
         b: { a: [ { a: 1 }, { a: 2 }, { a: 3 } ], b: [ { a: 4 }, { a: 5 }, { a: 6 } ] }
     };
     const transform = {
-        "$this": "$this",
-        "b{prop}.[item]": "a"
+        "$": "$",
+        "b{prop}.[item]": "prop.key + a"
     };
     const output = transformation(transform, input);
-    assertEquals(output.b, { a: [ 1, 2, 3 ], b: [ 4, 5, 6 ] });
+    assertEquals(output.b, { a: [ "a1", "a2", "a3" ], b: [ "b4", "b5", "b6" ] });
 });
 
 Deno.test('path array loop, not preexisting', function () {

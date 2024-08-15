@@ -63,8 +63,8 @@ export function resolvePathPattern(pathPattern: string,
             if (p1 === '*') return queryString(query);
             return (query?.[p2] || []).length === 0 ? '$$' : ((query || {})[p2] || []).join(',') || '$$'
         })
-        .replace('/$$', '') // empty substitutions eat an immediately previous / to avoid unintentional double or trailing /
-        .replace('$$', '');
+        //.replace(/\/\$\$/g, '') // empty substitutions eat an immediately previous / to avoid unintentional double or trailing /
+        .replace(/\$\$/g, '');
     return result;
 }
 

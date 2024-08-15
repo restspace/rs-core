@@ -161,3 +161,8 @@ Deno.test('follow dir change', () => {
     const followUrl = url.follow('../xxx');
     assertEquals(followUrl.toString(), '/abc/xxx');
 });
+Deno.test('strip private services', () => {
+    const url = new Url('/abc/*def/?mno=pqr&abc=def#123');
+    const followUrl = url.stripPrivateServices();
+    assertEquals(followUrl.toString(), '/abc/?mno=pqr&abc=def#123');
+});
