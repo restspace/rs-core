@@ -194,6 +194,7 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
 
     close() {
         this.updateState(true);
+        return this;
     }
 
     private finalClose() {
@@ -204,9 +205,11 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
 
     on(event: keyof AsyncQueueEvent<T>, listener: (...args: any[]) => void) {
         this.emitter.on(event, listener);
+        return this;
     }
     off(event: keyof AsyncQueueEvent<T>, listener: (...args: any[]) => void) {
         this.emitter.off(event, listener);
+        return this;
     }
 
     // returns an asyncqueue which is will return the outputs of the asyncqueue passed in after application
