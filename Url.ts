@@ -150,9 +150,9 @@ export class Url {
         this.isRelative = (!this.domain && urlParse[1] !== '/');
         this._isDirectory = this.path.endsWith('/');
         const qs = urlParse[5];
-        this.queryString = qs ? qs.substr(1) : '';
+        this.queryString = qs ? qs.substring(1) : '';
         const frag = urlParse[6];
-        this.fragment = frag ? frag.substr(1) : '';
+        this.fragment = frag ? frag.substring(1) : '';
     }
 
     hasBase(base: string) {

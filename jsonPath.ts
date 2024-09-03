@@ -15,7 +15,7 @@ const applySelect = (val: any, prop?: string, filter?: string) => {
         return val.filter(item => evaluate(filter, item, context));
     } else if (prop !== undefined) {
         if (prop === '') return val;
-        return Array.isArray(val) ? val.flatMap(item => item[prop]) : val[prop];
+        return Array.isArray(val) ? val.flatMap(item => item === null || item === undefined ? [] : item[prop]) : val[prop];
     } else {
         return undefined;
     }
