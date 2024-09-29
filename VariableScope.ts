@@ -20,6 +20,7 @@ export class VariableScope {
         }
         this.currentScope = this.scopes[scopeName];
         this.currentScopeName = scopeName;
+        return this;
     }
     /**
      * Get the current scope name
@@ -66,10 +67,12 @@ export class VariableScope {
             this.scopes[scopeName] = {};
         }
         this.scopes[scopeName][variableName] = value;
+        return this;
     }
 
     public set(variableName: string, value: any) {
         this.currentScope[variableName] = value;
+        return this;
     }
 
 }

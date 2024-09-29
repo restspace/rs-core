@@ -660,9 +660,10 @@ export class Message {
         return msgOut;
     }
 
-    async divertToSpec(spec: string | string[], defaultMethod?: MessageMethod, effectiveUrl?: Url, inheritMethod?: MessageMethod, headers?: object): Promise<Message | Message[]> {
+    async divertToSpec(spec: string | string[], defaultMethod?: MessageMethod, effectiveUrl?: Url, inheritMethod?: MessageMethod, headers?: object, auxData?: Record<string, unknown>): Promise<Message | Message[]> {
         if (Array.isArray(spec)) {
-            const unflatMsgs = await Promise.all(spec.flatMap(stg => this.divertToSpec(stg, defaultMethod, effectiveUrl, inheritMethod, headers)));
+            const unflatMsgs = await Promise.all(spec.flatMap(stg => this.divertToSpec(stg, defaultMethod, effectiveUrl, inheritMethod, headers, auxData)));
+
             return unflatMsgs.flat(1) as Message[];
         }
         let obj = {};
@@ -674,7 +675,7 @@ export class Message {
             && (specHasObjectMacro || specHasProperty)) {
             obj = await this.data.asJson();
         }
-        const msgs = Message.fromSpec(spec, this.tenant, effectiveUrl || this.url, obj, defaultMethod, this.name, inheritMethod, headers);
+        const msgs = Message.fromSpec(spec, this.tenant, effectiveUrl || this.url, obj, defaultMethod, this.name, inheritMethod, headers, auxData);
         // TODO ensure data splitting works with streams
         (Array.isArray(msgs) ? msgs : [ msgs ]).forEach(msg => {
             msg.data = msg.data || this.data;
@@ -808,7 +809,7 @@ export class Message {
 
 
     /** A request spec is "[<method>] [<post data property>] <url>" */
-    static fromSpec(spec: string, tenant: string, referenceUrl?: Url, data?: any, defaultMethod?: MessageMethod, name?: string, inheritMethod?: MessageMethod, headers?: object) {
+    static fromSpec(spec: string, tenant: string, referenceUrl?: Url, data?: any, defaultMethod?: MessageMethod, name?: string, inheritMethod?: MessageMethod, headers?: object, auxData?: Record<string, unknown>) {
         const parts = spec.trim().split(' ');
         let method = defaultMethod || 'GET' as MessageMethod;
         let url = '';
@@ -837,7 +838,7 @@ export class Message {
         }
         if (referenceUrl || data) {
             const refUrl = referenceUrl || new Url('/');
-            const urls = resolvePathPatternWithUrl(url, refUrl, data, name);
+            const urls = resolvePathPatternWithUrl(url, refUrl, data, name, undefined, auxData);
             if (Array.isArray(urls)) {
                 return urls.map((url) => new Message(Url.inheritingBase(referenceUrl, url), tenant, method, null, { ...headers }, postData ? MessageBody.fromObject(postData) : undefined));
             }

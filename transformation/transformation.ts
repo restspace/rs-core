@@ -118,8 +118,8 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
             (item) => evaluate(expression, item, Object.assign({}, transformHelper, data)))),
         expressionMin_expArgs: [1],
         merge: (...objs: object[]) => Object.assign({}, ...objs),
-        pathPattern: (pattern: string, decode?: boolean) => 
-            resolvePathPatternWithUrl(pattern, url, data, name, decode),
+        pathPattern: (pattern: string, decode?: boolean, urlIn?: string) => 
+            resolvePathPatternWithUrl(pattern, urlIn ? new Url(urlIn) : url, data, name, decode, variableScope.getVariables()),
         path: (pathPattern: string, val: any, decode?: boolean) => {
             if (isArrayLike(val)) val = Array.from(val);
             return jsonPath(val, resolvePathPatternWithUrl(pathPattern, url, data, name, decode) as string);

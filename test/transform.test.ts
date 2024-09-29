@@ -1,6 +1,7 @@
 import { assert, assertEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
 import { VariableScope } from '../VariableScope.ts'; // Replace 'path/to/VariableScope' with the actual path to the VariableScope module
+import { Url } from "../Url.ts";
 
 Deno.test('single var', function () {
     const input = {
@@ -533,4 +534,83 @@ Deno.test('entity change function', function () {
     };
     const output = transformation(transform, input);
     console.log(output);
+});
+Deno.test('pathPattern function with urlIn', function () {
+    const input = {
+        id: '123',
+        name: 'John Doe'
+    };
+    const transform = {
+        "pattern": "pathPattern('/users/$<0', true, 'https://api.example.com/v1')",
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.pattern, '/users/v1');
+});
+
+Deno.test('pathPattern function with urlIn and query parameters', function () {
+    const input = {
+        id: '456',
+        query: 'active=true&role=admin'
+    };
+    const transform = {
+        "pattern": "pathPattern('/users/$>0/${id}?${query}', true, 'https://api.example.com/v2')",
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.pattern, '/users/v2/456?active=true&role=admin');
+});
+
+Deno.test('pathPattern function with urlIn and special characters', function () {
+    const input = {
+        name: 'John Doe',
+        specialChar: '?&='
+    };
+    const transform = {
+        "pattern": "pathPattern('/users/$?(abc)/${name}/${specialChar}', true, 'https://api.example.com/?abc=123')",
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.pattern, '/users/123/John Doe/?&=');
+});
+Deno.test('pathPattern function two params', function () {
+    const input = {
+        name: 'John Doe',
+        specialChar: '?&='
+    };
+    const transform = {
+        "pattern": "pathPattern('/users/$?(abc)/${name}/${specialChar}', true)",
+    };
+    const output = transformation(transform, input, new Url('https://api.example.com/?abc=123'));
+    assertEquals(output.pattern, '/users/123/John Doe/?&=');
+});
+
+Deno.test('pathPattern with variable', function () {
+    const input = {
+        name: 'John Doe',
+        specialChar: '?&='
+    };
+    const transform = {
+        "pattern": "pathPattern('/users/$?(abc)/${name}/${$var}', true)",
+    };
+    const output = transformation(transform, input, new Url('https://api.example.com/?abc=123'),
+        'myname', new VariableScope({}).set('$var', 'varval'));
+    assertEquals(output.pattern, '/users/123/John Doe/varval');
+});
+
+//test for pathPattern which calls it with two arguments and passes in the 
+
+Deno.test('path pattern function', function () {
+    const input = [
+        {
+            a: [1, 9],
+            b: 2
+        },
+        {
+            a: [3, 5],
+            b: 4
+        }
+    ];
+    const transform = {
+        "lastx": "path('/a', $this)",
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.lastx, [ 1, 9, 3, 5 ]);
 });

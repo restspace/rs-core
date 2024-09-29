@@ -68,9 +68,9 @@ export function resolvePathPattern(pathPattern: string,
     return result;
 }
 
-export function resolvePathPatternWithUrl(pathPattern: string, url: Url, obj?: object, name?: string, decode?: boolean) {
+export function resolvePathPatternWithUrl(pathPattern: string, url: Url, obj?: object, name?: string, decode?: boolean, auxData?: Record<string, unknown>) {
     if (obj) {
-        return resolvePathPatternWithObject(pathPattern, obj, [], url.servicePath, url.basePathElements.join('/'), url.subPathElements.join('/'), url.toString(), url.query, name, url.isDirectory, decode);
+        return resolvePathPatternWithObject(pathPattern, obj, [], url.servicePath, url.basePathElements.join('/'), url.subPathElements.join('/'), url.toString(), url.query, name, url.isDirectory, decode, auxData);
     } else {
         return resolvePathPattern(pathPattern, url.servicePath, url.basePathElements.join('/'), url.subPathElements.join('/'), url.toString(), url.query, name, url.isDirectory, decode);
     }
@@ -86,11 +86,16 @@ function multiplyVariableSegments(currentSegments: string[], newSegment: string,
     });
 }
 
-function resolvePathPatternWithObjectInner2(pathPattern: string, regex: RegExp, partialResolutions: string[], sourceObject: any, sourcePath: string[]): [ string[], boolean ] {
+function resolvePathPatternWithObjectInner2(pathPattern: string, regex: RegExp, partialResolutions: string[], sourceObject: any, sourcePath: string[], auxData?: Record<string, unknown>): [ string[], boolean ] {
     const match = regex.exec(pathPattern);
     if (match) {
         const path = match[1];
-        let substitutions = jsonPath(sourceObject, path);
+        let substitutions: any;
+        if (auxData && path.startsWith('$')) {
+            substitutions = jsonPath(auxData, path);
+        } else {
+            substitutions = jsonPath(sourceObject, path);
+        }
         let isMultiplied = true;
 
         if (!Array.isArray(substitutions)) {
@@ -110,16 +115,16 @@ function resolvePathPatternWithObjectInner2(pathPattern: string, regex: RegExp, 
                 }
                 return pr.replace(new RegExp(regex.source), subs.toString());
             }));
-        const [ prs, wasMultiplied ] = resolvePathPatternWithObjectInner2(pathPattern, regex, newPartialResolutions, sourceObject, sourcePath);
+        const [ prs, wasMultiplied ] = resolvePathPatternWithObjectInner2(pathPattern, regex, newPartialResolutions, sourceObject, sourcePath, auxData);
         return [ prs, wasMultiplied || isMultiplied ];
     } else {
         return [ partialResolutions, false ];
     }
 }
 
-export function resolvePathPatternWithObject(pathPattern: string, sourceObject: any, sourcePath: string[], currentPath: string, basePath?: string, subPath?: string, fullUrl?: string, query?: QueryStringArgs, name?: string, isDirectory?: boolean, decode?: boolean): string[] | string {
+export function resolvePathPatternWithObject(pathPattern: string, sourceObject: any, sourcePath: string[], currentPath: string, basePath?: string, subPath?: string, fullUrl?: string, query?: QueryStringArgs, name?: string, isDirectory?: boolean, decode?: boolean, auxData?: Record<string, unknown>): string[] | string {
     const regex = /\${([^}]*)}/g;
     const partResolvedPattern = resolvePathPattern(pathPattern, currentPath, basePath, subPath, fullUrl, query, name, isDirectory, decode);
-    const [ resolved, wasMultiplied ] = resolvePathPatternWithObjectInner2(partResolvedPattern, regex, [ partResolvedPattern ], sourceObject, sourcePath);
+    const [ resolved, wasMultiplied ] = resolvePathPatternWithObjectInner2(partResolvedPattern, regex, [ partResolvedPattern ], sourceObject, sourcePath, auxData);
     return wasMultiplied ? resolved : resolved[0];
 }
