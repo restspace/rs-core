@@ -186,7 +186,7 @@ export class MessageBody {
     static fromRequest(req: Request): MessageBody | null {
         const contentLength = req.headers.get('content-length');
         const size = contentLength != null ? parseInt(contentLength) : NaN;
-        const contentType = req.headers.get('content-type');
+        const contentType = req.headers.get('content-type') || 'application/octet-stream';
         return contentType && req.body
             ? new MessageBody(req.body, contentType, isNaN(size) ? undefined : size)
             : null;

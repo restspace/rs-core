@@ -26,6 +26,7 @@ export interface ITriggerServiceConfig extends IServiceConfig {
 
 export type IChordServiceConfig = PartialBy<IServiceConfig, "access">;
 
+// TODO: Need to distinguish read/write data and change script/code
 export interface IAccessControl {
     readRoles: string;
     writeRoles: string;
