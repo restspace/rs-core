@@ -9,9 +9,12 @@ export async function* limitBytes(itbl: AsyncIterable<Uint8Array>, limit: number
     for await (let chunk of itbl) {
         bytes += chunk.byteLength;
         if (bytes > limit) {
-            return chunk.slice(0, limit - bytes); // 2nd arg is negative
+            const remainingBytes = limit - (bytes - chunk.byteLength);
+            yield chunk.slice(0, remainingBytes);
+            return;
         } else if (bytes === limit) {
-            return chunk;
+            yield chunk;
+            return;
         } else {
             yield chunk;
         }
@@ -117,17 +120,18 @@ export function readerToStream(r: Deno.Reader): ReadableStream<Uint8Array> {
 export async function readFileStream(path: string, startByte = 0, endByte = -1): Promise<ReadableStream<Uint8Array>> {
     const f = await Deno.open(path);
     if (startByte > 0) {
-        await Deno.seek(f.rid, startByte, Deno.SeekMode.Start);
+        await f.seek(startByte, Deno.SeekMode.Start);
     }
     let itbl = iterateReader(f, { bufSize: BUF_SIZE });
     if (endByte > -1) {
-        itbl = limitBytes(itbl, endByte - startByte);
+        itbl = limitBytes(itbl, endByte - startByte + 1);
     }
     const stream = new ReadableStream<Uint8Array>({
         async pull(controller) {
             try {
                 const { value, done } = await itbl.next();
                 if (done) {
+                    if (value) controller.enqueue(value);
                     controller.close();
                     f.close();
                 } else {
