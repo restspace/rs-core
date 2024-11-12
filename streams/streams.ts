@@ -1,6 +1,7 @@
 import { writeAll } from "https://deno.land/std@0.185.0/streams/mod.ts";
 import { ensureDir } from "https://deno.land/std@0.185.0/fs/ensure_dir.ts";
 import { dirname } from "https://deno.land/std@0.185.0/path/mod.ts";
+import type { Reader } from "jsr:@std/io/types";
 
 const BUF_SIZE = 64 * 1024;
 
@@ -85,7 +86,7 @@ export async function* toLines(stringItbl: AsyncIterable<Uint8Array>) {
 // local copy of std library iterateReader which allocates a new buffer
 // for each block to avoid async overwrites of a shared buffer
 export async function* iterateReader(
-    r: Deno.Reader,
+    r: Reader,
     options?: {
       bufSize?: number;
     },
@@ -102,7 +103,7 @@ export async function* iterateReader(
     }
   }
 
-export function readerToStream(r: Deno.Reader): ReadableStream<Uint8Array> {
+export function readerToStream(r: Reader): ReadableStream<Uint8Array> {
     const itbl = iterateReader(r, { bufSize: BUF_SIZE });
     const stream = new ReadableStream<Uint8Array>({
         async pull(controller) {

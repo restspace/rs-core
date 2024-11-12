@@ -4,6 +4,7 @@ import { ab2b64, ab2str, str2ab } from "./utility/arrayBufferUtility.ts";
 import { stripBom } from "https://deno.land/x/string/mod.ts";
 import { readerFromStreamReader } from "https://deno.land/std@0.185.0/streams/reader_from_stream_reader.ts"
 import { jsonPath } from "./jsonPath.ts";
+import type { Reader } from "jsr:@std/io/types";
 
 export class MessageBody {
     statusCode = 0;
@@ -137,7 +138,7 @@ export class MessageBody {
         return new Response(this.data).body;
     }
 
-    asServerResponseBody(): Uint8Array | Deno.Reader | undefined {
+    asServerResponseBody(): Uint8Array | Reader | undefined {
         if (this.data === null) return undefined;
         if (this.data instanceof ReadableStream) return readerFromStreamReader(this.data.getReader());
         return new Uint8Array(this.data);
