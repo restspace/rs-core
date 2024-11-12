@@ -9,7 +9,7 @@ export interface QuotaQueueConfig {
 export class QuotaQueueState extends BaseStateClass {
     delayers: Record<string, Delayer> = {};
 
-    async load(_context: SimpleServiceContext, config: QuotaQueueConfig) {
+    override async load(_context: SimpleServiceContext, config: QuotaQueueConfig) {
     }
 
     ensureDelayer(key: string, qConfig: QuotaQueueConfig) {

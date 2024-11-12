@@ -225,11 +225,11 @@ export class AsyncQueue<T> implements AsyncIterator<T> {
                         res = mapper(item);
                         if (res !== undefined) newAsq.enqueue(res);
                     } catch (err) {
-                        newAsq.enqueue(err);
+                        newAsq.enqueue(err as Error);
                     }
                 }
             } catch (err) {
-                newAsq.enqueue(err);
+                newAsq.enqueue(err as Error);
             }
             newAsq.close();
         };
