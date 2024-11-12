@@ -1,7 +1,9 @@
+import { IAdapter } from "./IAdapter.ts";
+
 /**
  * Interface for SMS operations.
  */
-export interface ISmsAdapter {
+export interface ISmsAdapter extends IAdapter {
   /**
    * Sends an SMS message.
    * @param {string} phoneNumber - The phone number to send the SMS to.

@@ -8,6 +8,7 @@ import * as log from "https://deno.land/std@0.185.0/log/mod.ts";
 import { Source } from "./Source.ts";
 import { GenericFunction } from "https://deno.land/std@0.185.0/log/logger.ts";
 import { BaseHandler } from "https://deno.land/std@0.185.0/log/handlers.ts";
+import { MessageBody } from "./MessageBody.ts";
 
 export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, context: BaseContext, config: unknown) => Promise<T>;
 
@@ -25,6 +26,8 @@ export interface BaseContext {
     primaryDomain: string;
     prePost?: PrePost;
     makeRequest: (msg: Message, source?: Source) => Promise<Message>;
+    verifyJsonResponse: (msg: Message, checkPath?: string) => Promise<number | MessageBody>;
+    verifyResponse: (msg: Message, mimeType?: string) => Promise<number | MessageBody>;
     runPipeline: (msg: Message, pipelineSpec: PipelineSpec, contextUrl?: Url, concurrencyLimit?: number) => Promise<Message>;
     logger: WrappedLogger;
     baseLogger: log.Logger;
