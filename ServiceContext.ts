@@ -26,7 +26,7 @@ export interface BaseContext {
     primaryDomain: string;
     prePost?: PrePost;
     makeRequest: (msg: Message, source?: Source) => Promise<Message>;
-    verifyJsonResponse: (msg: Message, checkPath?: string) => Promise<number | MessageBody>;
+    verifyJsonResponse: (msg: Message, checkPath?: string) => Promise<any>;
     verifyResponse: (msg: Message, mimeType?: string) => Promise<number | MessageBody>;
     runPipeline: (msg: Message, pipelineSpec: PipelineSpec, contextUrl?: Url, concurrencyLimit?: number) => Promise<Message>;
     logger: WrappedLogger;

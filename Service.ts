@@ -81,6 +81,19 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         context.user = msg?.user?.email || undefined;
         context.serviceName = config.name;
         context.logger = createWrappedLogger(context);
+        // also enhance context of adapter
+        if (context.adapter) {
+            // we need to mutate the original object so changes reach into closures
+            context.adapter.context = Object.assign(context.adapter.context,
+                {
+                    traceparent: context.traceparent,
+                    tracestate: context.tracestate,
+                    user: context.user,
+                    serviceName: context.serviceName,
+                    logger: context.logger
+                }
+            );
+        }
         return context;
     }
 
