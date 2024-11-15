@@ -5,5 +5,5 @@ import { AdapterContext } from "../ServiceContext.ts";
  */
 export interface IAdapter {
     props: Record<string, any>;
-    context: AdapterContext
+    context: AdapterContext;
 }

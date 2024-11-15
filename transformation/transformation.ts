@@ -146,6 +146,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         literal: (obj: Record<string, unknown>) => obj,
         parseInt: (s: string, radix?: number) => parseInt(s, radix),
         parseFloat: (s: string) => parseFloat(s),
+        parseJson: (s: string) => JSON.parse(s),
         uuid: () => crypto.randomUUID(),
         canonicalise: (s: string, maxLength?: number) => canonicaliseName(s, maxLength),
         stripHtml: (s: string, sepPWithNewline?: boolean) => {
