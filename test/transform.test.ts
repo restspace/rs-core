@@ -614,3 +614,13 @@ Deno.test('path pattern function', function () {
     const output = transformation(transform, input);
     assertEquals(output.lastx, [ 1, 9, 3, 5 ]);
 });
+Deno.test('expressionReduce function', function () {
+    const input = [
+        "a", "b", "c"
+    ];
+    const transform = {
+        "reduce": "expressionReduce($, '', '$previous + $')"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.reduce, "abc");
+});

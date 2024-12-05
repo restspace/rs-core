@@ -44,7 +44,7 @@ Deno.test('bad path', function () {
     const output = jsonPath(input, path);
     assertEquals(output, undefined);
 });
-Deno.test('bad path 2', function () {
+Deno.test('bad path 1', function () {
     const input = 
         {
             a: [ 1, 2, 3 ]
