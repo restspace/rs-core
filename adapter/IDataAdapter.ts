@@ -26,11 +26,11 @@ export interface IDataAdapter extends IAdapter {
     /**
      * Write a json data object to the given key in a dataset
      * @param dataset the dataset to write to
-     * @param key the key within the dataset on which to store the data object
+     * @param key the key within the dataset on which to store the data object (if undefined, the store generates the key)
      * @param data the data object
-     * @returns an HTTP status code for any error or 0 for success
+     * @returns an HTTP status code for any error or 0 for success, or the key if the key was generated
      */
-    writeKey: (dataset: string, key: string, data: MessageBody) => Promise<number>;
+    writeKey: (dataset: string, key: string | undefined, data: MessageBody) => Promise<string | number>;
     /**
      * delete a key and it's data object
      * @param dataset delete from this dataset
