@@ -27,6 +27,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     methodFuncs: { [ method: string ]: PathMap<ServiceFunction<TAdapter, TConfig>> } = {};
     schemas: { [ method: string ]: PathMap<Schema> } = {};
     initFunc: (context: ServiceContext<TAdapter>, config: TConfig, oldState?: BaseStateClass) => Promise<void> = () => Promise.resolve();
+    postIsWrite = true;
 
     /** Get a service function by the base url, preferring the longest matching url */
     funcByUrl(method: string, url: Url) : [ string[], ServiceFunction<TAdapter, TConfig> ] | undefined {
@@ -155,7 +156,8 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
     authType: (msg: Message) => Promise<AuthorizationType> = (msg: Message) => { // returns promise as overrides may need to be async
         switch (msg.method) {
             case "OPTIONS": return Promise.resolve(AuthorizationType.none);
-            case "GET": case "HEAD": case "POST": return Promise.resolve(AuthorizationType.read);
+            case "GET": case "HEAD": return Promise.resolve(AuthorizationType.read);
+            case "POST": return Promise.resolve(this.postIsWrite ? AuthorizationType.write : AuthorizationType.read);
             default: return Promise.resolve(AuthorizationType.write);
         }
     }
