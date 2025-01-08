@@ -249,7 +249,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         } else if (match === '[') { // loop context name in [] in path
             let list = newOutput;
 
-            if (!Array.isArray(newOutput) && !(typeof newOutput === 'object' && 'length' in newOutput)) {
+            if (!Array.isArray(newOutput) && newOutput !== null && !(typeof newOutput === 'object' && 'length' in newOutput)) {
                 if (newOutput && typeof newOutput === 'object') {
                     list = Object.entries(newOutput).map(([k, v]) => (
                         typeof v === 'object'
@@ -260,6 +260,8 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
                 } else {
                     return;
                 }
+            } else if (newOutput === null) {
+                return;
             }
 
             const loopItem = {} as Record<string, unknown>;

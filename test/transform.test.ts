@@ -387,6 +387,19 @@ Deno.test('index non list', function () {
     assertEquals(output.notAList, "abc");
 });
 
+Deno.test('index null', function () {
+    const input = {
+        notAList: null,
+        a: 1
+    };
+    const transform = {
+        "$this": "$this",
+        "notAList[item]": "val"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output, { a: 1, notAList: null });
+});
+
 Deno.test('avoid output multiple paths pointing to same data', function () {
     const input = {
         a: [ 1, 2, 3 ]
