@@ -168,7 +168,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         console.log('expr ' + expr);
         const arrResult = doEvaluate(expr, data, variables, transformHelper);
         return arrResult;
-    } else if (typeof transformObject === 'object') {
+    } else if (typeof transformObject === 'object' && transformObject !== null) {
         let transformed: any = {};
         const selfObject = transformObject['$'] || transformObject['$this'] || transformObject['.'];
         if (selfObject) {
@@ -205,6 +205,9 @@ const rectifyObject = (obj: any) => {
 // tree of the output, so we copy the output tree shallowly each time we follow a segment of the
 // property path
 const doTransformKey = (key: string, keyStart: number, input: any, output: any, url: Url, subTransform: any, name: string, variableScope: VariableScope) => {
+    if (output === null || output === undefined) {
+        return;
+    }
     let [ match, newKeyStart ] = scanFirst(key, keyStart, [ '.', '[', '{' ]);
     if (newKeyStart < 0) {
         const effectiveKey = key.slice(keyStart);
@@ -222,7 +225,7 @@ const doTransformKey = (key: string, keyStart: number, input: any, output: any, 
         const keyPart = key.slice(keyStart, newKeyStart - 1).trim(); // the property key before the array
         let newOutput = output;
         if (keyPart) {
-            if (!(keyPart in output)) {
+            if (output === null || !(keyPart in output)) {
                 output[keyPart] = match === '[' ? [] : {};
             } else {
                 output[keyPart] = shallowCopy(output[keyPart]);

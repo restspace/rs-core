@@ -394,7 +394,7 @@ Deno.test('index null', function () {
     };
     const transform = {
         "$this": "$this",
-        "notAList[item]": "val"
+        "notAList.xxx[item]": "val"
     };
     const output = transformation(transform, input);
     assertEquals(output, { a: 1, notAList: null });
