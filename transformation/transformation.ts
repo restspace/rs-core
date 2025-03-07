@@ -1,5 +1,5 @@
 import { evaluate } from 'https://cdn.skypack.dev/bcx-expression-evaluator?dts';
-import dayjs from "https://cdn.skypack.dev/dayjs@1.10.4";
+import dayjs from "npm:dayjs";
 import { Url } from "../Url.ts";
 import { resolvePathPatternWithUrl } from "../PathPattern.ts";
 import { pathCombine, scanFirst, shallowCopy, upTo } from "../utility/utility.ts";

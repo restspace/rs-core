@@ -1,6 +1,6 @@
 import { IAdapter } from "./adapter/IAdapter.ts";
 import { IServiceManifest } from "./IManifest.ts";
-import { PrePost } from "./IServiceConfig.ts";
+import { ITriggerServiceConfig, PrePost } from "./IServiceConfig.ts";
 import { Message } from "./Message.ts";
 import { PipelineSpec } from "./PipelineSpec.ts";
 import { Url } from "./Url.ts";
@@ -9,8 +9,13 @@ import { Source } from "./Source.ts";
 import { GenericFunction } from "https://deno.land/std@0.185.0/log/logger.ts";
 import { BaseHandler } from "https://deno.land/std@0.185.0/log/handlers.ts";
 import { MessageBody } from "./MessageBody.ts";
+import { IDataAdapter } from "./adapter/IDataAdapter.ts";
+import dayjs from "npm:dayjs"
+import duration from "npm:dayjs/plugin/duration.js";
 
-export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, context: BaseContext, config: unknown) => Promise<T>;
+dayjs.extend(duration);
+
+export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, context: SimpleServiceContext, config: unknown) => Promise<T>;
 
 export interface WrappedLogger {
     critical: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
@@ -86,9 +91,26 @@ export interface ServiceContext<TAdapter extends IAdapter> extends SimpleService
 }
 
 export class BaseStateClass {
+    constructor(public context: SimpleServiceContext, protected stateAdapter: IDataAdapter) {
+    }
+
+    private storeKey(key: string) {
+        return `${this.context.serviceName || ''}|${this.constructor.name}|${key}`;
+    }
+
+    protected async getStore(key: string) {
+        return await this.stateAdapter.readKey(`_state_${this.context.tenant}`, this.storeKey(key));
+    }
+
+    protected async setStore(key: string, value: any) {
+        const storeVal = MessageBody.fromObject(value);
+        return await this.stateAdapter.writeKey(`_state_${this.context.tenant}`, this.storeKey(key), storeVal);
+    }
+    
     load(_context: BaseContext, _config: unknown) {
         return Promise.resolve();
     }
+
     unload(newState?: BaseStateClass) {
         return Promise.resolve();
     }
@@ -97,18 +119,65 @@ export class BaseStateClass {
 export class MultiStateClass<S extends BaseStateClass, C> extends BaseStateClass {
     states: Record<string, S> = {};
 
-    substate(key: string, cons: new(config: C) => S, config: C) {
+    substate(key: string, cons: new(context: SimpleServiceContext, stateAdapter: IDataAdapter) => S, config: C) {
         if (!this.states[key]) {
-            this.states[key] = new cons(config);
+            this.states[key] = new cons(this.context, this.stateAdapter);
         }
         return this.states[key];
     }
 }
 
-export type StateClass<T extends BaseStateClass> = new() => T;
+export interface ITimerConfig extends ITriggerServiceConfig {
+    repeatDuration: string; // ISO 8601 duration
+    maxRandomAdditionalMs: number;
+    autoStart?: boolean;
+}
+
+export abstract class TimedActionState<TContext extends SimpleServiceContext = SimpleServiceContext> extends BaseStateClass {
+    paused = false;
+    ended = false;
+    count = 0;
+    timeout?: number;
+
+    protected abstract action(context: TContext, config: ITimerConfig): Promise<void>;
+
+    protected getNextRun(lastRun: any, config: ITimerConfig) {
+        const repeatDuration = dayjs.duration(config.repeatDuration);
+        const repeatMs = repeatDuration.asMilliseconds();
+        const maxRandomAdditionalMs = config.maxRandomAdditionalMs || 0;
+        const nextRun = lastRun.add(repeatMs + Math.floor(Math.random() * maxRandomAdditionalMs), "ms");
+        return nextRun;
+    }
+
+    protected async runLoop(context: TContext, config: ITimerConfig) {
+        let nextRun = this.getNextRun(dayjs(), config);
+        if (!config.autoStart) this.paused = true;
+        while (!this.ended) {
+            const delayMs = nextRun.diff(dayjs(), "ms");
+            await new Promise((resolve) => this.timeout = setTimeout(resolve, delayMs));
+            if (!this.paused && !this.ended) {
+                await this.action(context, config);
+            }
+            nextRun = this.getNextRun(nextRun, config);
+        }
+    }
+
+    override async load(context: TContext, config: ITimerConfig) {
+        this.runLoop(context, config);
+        return Promise.resolve();
+    }
+
+    override async unload(_newState?: BaseStateClass | undefined): Promise<void> {
+        this.ended = true;
+        if (this.timeout) clearTimeout(this.timeout);
+        return Promise.resolve();
+    }
+}
+
+export type StateClass<T extends BaseStateClass> = new(context: SimpleServiceContext, stateAdapter: IDataAdapter) => T;
 
 export type AdapterContext = BaseContext;
 
-export const nullState = <T>(_cons: new() => T) => {
+export const nullState = <T>(_cons: new(context: SimpleServiceContext, stateAdapter: IDataAdapter) => T) => {
     throw new Error('State not set');
 }
