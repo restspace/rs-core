@@ -28,10 +28,23 @@ export interface WrappedLogger {
 
 export interface BaseContext {
     tenant: string;
-    primaryDomain: string;
+    primaryDomain: string;  
     prePost?: PrePost;
+    /**
+     * Makes a request to the specified URL.
+     * If source is provided, it will be used to determine the source of the request.
+     */
     makeRequest: (msg: Message, source?: Source) => Promise<Message>;
+    /**
+     * Verifies that the response is a JSON object and returns the object.
+     * If checkPath is provided, it will be used to check that the object has the specified property.
+     * If the object is not a JSON object, or the property is not found, an error will be logged and 502 will be returned.
+     */
     verifyJsonResponse: (msg: Message, checkPath?: string) => Promise<any>;
+    /**
+     * Verifies that the response is a MessageBody and returns the body.
+     * If mimeType is provided, it will be used to check that the body has the specified MIME type.
+     */
     verifyResponse: (msg: Message, mimeType?: string) => Promise<number | MessageBody>;
     runPipeline: (msg: Message, pipelineSpec: PipelineSpec, contextUrl?: Url, concurrencyLimit?: number) => Promise<Message>;
     logger: WrappedLogger;
@@ -105,6 +118,10 @@ export class BaseStateClass {
     protected async setStore(key: string, value: any) {
         const storeVal = MessageBody.fromObject(value);
         return await this.stateAdapter.writeKey(`_state_${this.context.tenant}`, this.storeKey(key), storeVal);
+    }
+
+    protected async deleteStore(key: string) {
+        return await this.stateAdapter.deleteKey(`_state_${this.context.tenant}`, this.storeKey(key));
     }
     
     load(_context: BaseContext, _config: unknown) {
