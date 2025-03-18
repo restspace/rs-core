@@ -1,0 +1,5 @@
+{
+  "imports": {
+    "@workingdevshero/deno-imap": "../deno-imap"
+  }
+}

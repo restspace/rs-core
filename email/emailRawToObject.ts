@@ -11,6 +11,31 @@ interface ParsedBody {
     attachments?: Record<string, string>;
 }
 
+function decodeEncodedWords(input: string): string {
+    return input.replace(/=\?([^?]+)\?([BQ])\?([^?]+)\?=/gi, (substring: string, charset: string, encoding: string, encodedText: string) => {
+        try {
+            if (encoding.toUpperCase() === 'B') {
+                // Base64 decoding
+                const decoded = atob(encodedText);
+                const decoder = new TextDecoder(charset);
+                return decoder.decode(new Uint8Array([...decoded].map(char => char.charCodeAt(0))));
+            } else if (encoding.toUpperCase() === 'Q') {
+                // Quoted-printable decoding
+                let decoded = encodedText
+                    .replace(/_/g, ' ') // _ is used for spaces in Q-encoded text
+                    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+                const decoder = new TextDecoder(charset);
+                return decoder.decode(new TextEncoder().encode(decoded));
+            }
+        } catch (e) {
+            console.error("Decoding error:", e);
+            return encodedText;
+        }
+        return substring;
+    });
+}
+
+
 export function emailRawToObject(rfc822: string): Email {
     const lines = rfc822.split('\r\n');
     const headers: Record<string, string> = {};
@@ -81,10 +106,10 @@ export function emailRawToObject(rfc822: string): Email {
     return {
         id: headers['message-id'] || '',
         mailboxId: 0,
-        from: headers['from'] || '',
-        to: headers['to'] || '',
+        from: decodeEncodedWords(headers['from'] || ''),
+        to: decodeEncodedWords(headers['to'] || ''),
         date: new Date(headers['date'] || ''),
-        subject: headers['subject'] || '',
+        subject: decodeEncodedWords(headers['subject'] || ''),
         body: parsedBody.html || parsedBody.text || '',
         contentType: contentType,
         charset: charset,

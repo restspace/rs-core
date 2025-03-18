@@ -34,10 +34,11 @@ export const emailSchema = {
         attachments: { type: "object" },
         references: { type: "string" },
     },
-    required: [ "from", "to", "date", "subject", "body", "contentType" ],
+    required: [ "from", "to", "subject", "date", "body", "contentType" ],
 };
 
 export interface IEmailStoreAdapter extends IAdapter {
     fetchEmails: (since: Date, folder?: string, excludeIds?: number[]) => AsyncGenerator<Email>;
-    writeEmailToFolder: (email: Email, folder?: string) => Promise<number>;
+    writeEmailToFolder: (email: Email, folder?: string, flags?: string[]) => Promise<number>;
+    listFolders: () => Promise<string[]>;
 }

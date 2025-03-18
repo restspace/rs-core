@@ -30,7 +30,7 @@ export interface IDataAdapter extends IAdapter {
      * @param data the data object
      * @returns an HTTP status code for any error or 200 for updated, 201 for created
      */
-    writeKey: (dataset: string, key: string | undefined, data: MessageBody) => Promise<string | number>;
+    writeKey: (dataset: string, key: string | undefined, data: MessageBody) => Promise<number>;
     /**
      * delete a key and it's data object
      * @param dataset delete from this dataset
