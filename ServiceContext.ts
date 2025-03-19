@@ -104,7 +104,7 @@ export interface ServiceContext<TAdapter extends IAdapter> extends SimpleService
 }
 
 export class BaseStateClass {
-    constructor(public context: SimpleServiceContext, protected stateAdapter: IDataAdapter) {
+    constructor(public context: SimpleServiceContext, protected stateAdapter?: IDataAdapter) {
     }
 
     private storeKey(key: string) {
@@ -112,16 +112,16 @@ export class BaseStateClass {
     }
 
     protected async getStore(key: string) {
-        return await this.stateAdapter.readKey(`_state_${this.context.tenant}`, this.storeKey(key));
+        return await this.stateAdapter?.readKey(`_state_${this.context.tenant}`, this.storeKey(key));
     }
 
     protected async setStore(key: string, value: any) {
         const storeVal = MessageBody.fromObject(value);
-        return await this.stateAdapter.writeKey(`_state_${this.context.tenant}`, this.storeKey(key), storeVal);
+        return await this.stateAdapter?.writeKey(`_state_${this.context.tenant}`, this.storeKey(key), storeVal);
     }
 
     protected async deleteStore(key: string) {
-        return await this.stateAdapter.deleteKey(`_state_${this.context.tenant}`, this.storeKey(key));
+        return await this.stateAdapter?.deleteKey(`_state_${this.context.tenant}`, this.storeKey(key));
     }
     
     load(_context: BaseContext, _config: unknown) {
@@ -136,7 +136,7 @@ export class BaseStateClass {
 export class MultiStateClass<S extends BaseStateClass, C> extends BaseStateClass {
     states: Record<string, S> = {};
 
-    substate(key: string, cons: new(context: SimpleServiceContext, stateAdapter: IDataAdapter) => S, config: C) {
+    substate(key: string, cons: new(context: SimpleServiceContext, stateAdapter?: IDataAdapter) => S, config: C) {
         if (!this.states[key]) {
             this.states[key] = new cons(this.context, this.stateAdapter);
         }
@@ -191,7 +191,7 @@ export abstract class TimedActionState<TContext extends SimpleServiceContext = S
     }
 }
 
-export type StateClass<T extends BaseStateClass> = new(context: SimpleServiceContext, stateAdapter: IDataAdapter) => T;
+export type StateClass<T extends BaseStateClass> = new(context: SimpleServiceContext, stateAdapter?: IDataAdapter) => T;
 
 export type AdapterContext = BaseContext;
 

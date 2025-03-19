@@ -3,7 +3,7 @@ export function ab2str(buf: ArrayBuffer): string {
 }
   
 export function str2ab(str: string): ArrayBuffer {
-    return new TextEncoder().encode(str).buffer;
+    return new TextEncoder().encode(str).buffer as ArrayBuffer;
 }
   
 export function ab2b64(buf: ArrayBuffer): string {
