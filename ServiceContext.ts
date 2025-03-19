@@ -112,15 +112,27 @@ export class BaseStateClass {
     }
 
     protected async getStore(key: string) {
+        if (!this.stateAdapter) {
+            this.context.logger.warning('No state adapter found for %s while reading state', this.constructor.name);
+            return 500;
+        }
         return await this.stateAdapter?.readKey(`_state_${this.context.tenant}`, this.storeKey(key));
     }
 
     protected async setStore(key: string, value: any) {
+        if (!this.stateAdapter) {
+            this.context.logger.warning('No state adapter found for %s while writing state', this.constructor.name);
+            return 500;
+        }
         const storeVal = MessageBody.fromObject(value);
         return await this.stateAdapter?.writeKey(`_state_${this.context.tenant}`, this.storeKey(key), storeVal);
     }
 
     protected async deleteStore(key: string) {
+        if (!this.stateAdapter) {
+            this.context.logger.warning('No state adapter found for %s while deleting state', this.constructor.name);
+            return 500;
+        }
         return await this.stateAdapter?.deleteKey(`_state_${this.context.tenant}`, this.storeKey(key));
     }
     
