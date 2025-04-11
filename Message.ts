@@ -32,6 +32,7 @@ const sendHeaders: string[] = [
     "content-range",
     "content-security-policy",
     "content-type",
+    "cross-origin-resource-policy",
     "date",
     "delta-base",
     "etag",
