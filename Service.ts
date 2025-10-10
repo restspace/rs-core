@@ -110,7 +110,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
             return Promise.resolve(methodFunc(msg, enhancedContext, config));
         }
 
-        if (method === 'options') return Promise.resolve(msg);
+        if (method === 'options' && !this.methodFuncs['options']) return Promise.resolve(msg);
         if (msg.url.isDirectory) {
             const pathFunc = this.funcByUrl(method + 'Directory', msg.url);
             if (pathFunc) {
@@ -291,6 +291,9 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
 
     /** Handle all messages at or under the configured base path concatenated with the path parameter using the supplied ServiceFunction */
     allPath = (path: string, func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('all', path, func);
+
+    /** Handle all OPTIONS method messages at or under the configured base path using the supplied ServiceFunction. Otherwise this is handled automatically. */
+    options = (func: ServiceFunction<TAdapter, TConfig>) => this.setMethodPath('options', '/', func);
 }
 
 export class AuthService<TAdapter extends IAdapter = IAdapter, TConfig extends IServiceConfig = IServiceConfig> extends Service<TAdapter, TConfig> {
