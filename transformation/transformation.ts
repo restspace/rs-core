@@ -83,7 +83,7 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
     const transformHelper = {
         Math: Math,
         transformMap: (list: ArrayLike<any>, transformObject: any) => 
-            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, data, item), url, name, variableScope)),
+            !list ? [] : Array.from(list, item => transformation(transformObject, Object.assign({}, item, { 'outer': data.outer || data }), url, name, variableScope)),
         expressionReduce: (list: ArrayLike<any>, init: any, expression: string) => !list ? init : Array.from(list).reduce(
             (previous, item) => doEvaluate(expression, item, variables, Object.assign({}, transformHelper, data, { '$previous': previous })),
             init),
