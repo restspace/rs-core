@@ -65,6 +65,7 @@ const sendHeaders: string[] = [
     "x-powered-by",
     "x-request-id",
     "x-restspace-service",
+    "x-total-count",
     "x-ua-compatible",
     "x-xss-protection"
 ];
@@ -921,3 +922,4 @@ export class Message {
         return new Message(Url.inheritingBase(referenceUrl, url), tenant, method, null, { ...headers }, postData ? MessageBody.fromObject(postData) : undefined);
     }
 }
+
