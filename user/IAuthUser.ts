@@ -6,6 +6,8 @@ export interface IAuthUser {
     roles: string;
     password: string;
     exp?: number;
+    /** Allow custom fields for data-field authorization (e.g., organisationId) */
+    [key: string]: unknown;
 }
 
 export function userIsAnon(user: IAuthUser) {

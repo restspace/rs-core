@@ -4,6 +4,38 @@ import { MessageBody } from "../MessageBody.ts";
 import { IAdapter } from "./IAdapter.ts";
 
 /**
+ * Filter for data-field authorization, used to filter records at the adapter level
+ */
+export interface DataFieldFilter {
+    dataFieldName: string;
+    userFieldValue: unknown;
+}
+
+/**
+ * Extended adapter interface for adapters that support server-side data field filtering.
+ * Adapters implementing this can efficiently filter records at the database level.
+ */
+export interface IDataFieldFilterableAdapter extends IDataAdapter {
+    /** Whether this adapter supports server-side data field filtering */
+    supportsDataFieldFiltering: boolean;
+
+    /**
+     * List dataset with data field filters applied at the database level
+     * @param dataset the dataset name
+     * @param filters the data field filters to apply
+     * @param take maximum number of records
+     * @param skip records to skip
+     * @returns filtered records or error code
+     */
+    listDatasetWithFilter: (
+        dataset: string,
+        filters: DataFieldFilter[],
+        take?: number,
+        skip?: number
+    ) => Promise<PathInfo[] | number>;
+}
+
+/**
  * The data adapter specifies an adapter which wraps a service which provides key-value storage of
  * JSON objects
  */
