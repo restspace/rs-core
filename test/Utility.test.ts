@@ -49,6 +49,12 @@ Deno.test('patch primitive', function() {
     const patched = patch(targ, patchData);
     assertStrictEquals(patched, 2);
 });
+Deno.test('patch primitive to list', function() {
+    const targ = "abc";
+    const patchData = [ 2 ];
+    const patched = patch(targ, patchData);
+    assertEquals(patched, [ 2 ]);
+});
 Deno.test('patch object', function() {
     const targ = { a: 1, b: 2 };
     const patchData = { a: 3 };
