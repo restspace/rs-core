@@ -367,6 +367,7 @@ export class Message {
         msg.conditionalMode = this.conditionalMode;
         msg.authenticated = this.authenticated;
         msg.internalPrivilege = this.internalPrivilege;
+        msg.cookies = { ...this.cookies };
         msg.user = this.user;
         msg.name = this.name;
         return msg.setStatus(this.status);
@@ -403,7 +404,14 @@ export class Message {
     private mapHeaders(msgHeaders: Record<string, string | string[]>, headers: Headers) {
         Object.entries(msgHeaders)
             .flatMap(([k, vs]) => Array.isArray(vs) ? vs.map(v => [k, v]) : [[k, vs]]) // expand multiple identical headers
-            .forEach(([k, v]) => headers.set(this.headerCase(k), v));
+            .forEach(([k, v]) => {
+                const headerName = this.headerCase(k);
+                if (k.toLowerCase() === "set-cookie") {
+                    headers.append(headerName, v);
+                } else {
+                    headers.set(headerName, v);
+                }
+            });
         return headers;
     }
 

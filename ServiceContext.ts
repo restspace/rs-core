@@ -1,6 +1,6 @@
 import { IAdapter } from "./adapter/IAdapter.ts";
 import { IServiceManifest } from "./IManifest.ts";
-import { ITriggerServiceConfig, PrePost } from "./IServiceConfig.ts";
+import { IAccessControl, ITriggerServiceConfig, PrePost } from "./IServiceConfig.ts";
 import { Message } from "./Message.ts";
 import { PipelineSpec } from "./PipelineSpec.ts";
 import { Url } from "./Url.ts";
@@ -56,7 +56,11 @@ export interface BaseContext {
     traceparent?: string; // standard tracing header
     tracestate?: string; // standard tracing header
     user?: string;
+    /** Request-scoped authenticated user object (when available). */
+    userObj?: unknown;
     serviceName?: string;
+    /** Request-scoped access config (when available). */
+    access?: IAccessControl;
     registerAbortAction: (msg: Message, action: () => void) => void;
 }
 
