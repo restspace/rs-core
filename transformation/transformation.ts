@@ -108,6 +108,8 @@ export const transformation = (transformObject: any, data: any, url: Url = new U
         expressionSort_expArgs: [1],
         unique: (list: ArrayLike<any>) => !list ? [] : Array.from(new Set(Array.from(list))),
         pathCombine,
+        encodeURI,
+        encodeURIComponent,
         expressionGroup: (list: ArrayLike<any>, expression: string) => !list ? {} : groupBy(Array.from(list),
              (item) => evaluate(expression, item, Object.assign({}, transformHelper, data))),
         expressionGroup_expArgs: [1],

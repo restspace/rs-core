@@ -42,6 +42,19 @@ Deno.test('parseInt', function () {
     const output = transformation(transform, input);
     assertEquals(output.q, 2);
 });
+Deno.test('encodeURI and encodeURIComponent functions', function () {
+    const input = {
+        s: "https://example.com/a b?x=1&y=2",
+        p: "a b?x=1&y=2"
+    };
+    const transform = {
+        uri: "encodeURI(s)",
+        component: "encodeURIComponent(p)"
+    };
+    const output = transformation(transform, input);
+    assertEquals(output.uri, "https://example.com/a%20b?x=1&y=2");
+    assertEquals(output.component, "a%20b%3Fx%3D1%26y%3D2");
+});
 Deno.test('error generation', function () {
     const input = {
         a: 1,
