@@ -7,3 +7,10 @@ export interface IAdapter {
     props: Record<string, any>;
     context: AdapterContext;
 }
+
+/**
+ * Optional adapter lifecycle contract for resources that need cleanup.
+ */
+export interface IDisposableAdapter extends IAdapter {
+    close(): Promise<void>;
+}
