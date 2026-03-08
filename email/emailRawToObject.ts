@@ -1,4 +1,4 @@
-import { Email } from "../adapter/IEmailStoreAdapter.ts";
+import { Email, EmailAttachment } from "../adapter/IEmailStoreAdapter.ts";
 
 interface MimePart {
     headers: string;
@@ -8,7 +8,7 @@ interface MimePart {
 interface ParsedBody {
     text?: string;
     html?: string;
-    attachments?: Record<string, string>;
+    attachments?: EmailAttachment[];
 }
 
 function decodeEncodedWords(input: string): string {
@@ -50,7 +50,7 @@ export function emailRawToObject(rfc822: string): Email {
 
     // Parse headers and body
     for (const line of lines) {
-        if (line === '') {
+        if (!inBody && line === '') {
             inBody = true;
             continue;
         }
@@ -91,13 +91,29 @@ export function emailRawToObject(rfc822: string): Email {
                 }
             }
         } else {
-            body += line + '\n';
+            body += line + '\r\n';
         }
     }
 
     // Save last header if exists
     if (currentHeader && currentValue) {
         headers[currentHeader.toLowerCase()] = currentValue;
+    }
+
+    const rootContentType = headers["content-type"];
+    if (rootContentType) {
+        const typeMatch = rootContentType.match(/([^;]+)/);
+        if (typeMatch) {
+            contentType = typeMatch[1].toLowerCase().trim();
+        }
+        const charsetMatch = rootContentType.match(/charset=([^;]+)/i);
+        if (charsetMatch) {
+            charset = charsetMatch[1].replace(/"/g, "").toLowerCase().trim();
+        }
+        const boundaryMatch = rootContentType.match(/boundary=([^;]+)/i);
+        if (boundaryMatch) {
+            boundary = boundaryMatch[1].replace(/"/g, "").trim();
+        }
     }
 
     // Parse the body based on content type
@@ -120,13 +136,12 @@ export function emailRawToObject(rfc822: string): Email {
     };
 }
 
-function decodeQuotedPrintable(input: string): string {
-    let output = '';
+function decodeQuotedPrintableToBytes(input: string): Uint8Array {
+    const output: number[] = [];
     let i = 0;
-    
+
     while (i < input.length) {
         if (input[i] === '=') {
-            // Handle soft line breaks
             if (input[i + 1] === '\r' && input[i + 2] === '\n') {
                 i += 3;
                 continue;
@@ -135,77 +150,144 @@ function decodeQuotedPrintable(input: string): string {
                 i += 2;
                 continue;
             }
-            
-            // Handle encoded characters
+
             if (i + 2 < input.length) {
                 const hex = input.substring(i + 1, i + 3);
                 if (/^[0-9A-Fa-f]{2}$/.test(hex)) {
-                    output += String.fromCharCode(parseInt(hex, 16));
+                    output.push(parseInt(hex, 16));
                     i += 3;
                     continue;
                 }
             }
         }
-        output += input[i];
+
+        output.push(input.charCodeAt(i) & 0xff);
         i++;
     }
-    
-    return output;
+
+    return new Uint8Array(output);
+}
+
+function bytesToBinaryString(bytes: Uint8Array): string {
+    let binary = "";
+    for (const value of bytes) {
+        binary += String.fromCharCode(value);
+    }
+    return binary;
+}
+
+function binaryStringToBytes(binary: string): Uint8Array {
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i) & 0xff;
+    }
+    return bytes;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+    return btoa(bytesToBinaryString(bytes));
+}
+
+function normalizeBase64(input: string): string {
+    return input.replace(/\s+/g, "");
+}
+
+function decodeTransferEncodingToBytes(body: string, transferEncoding: string): Uint8Array {
+    if (transferEncoding === "base64") {
+        return binaryStringToBytes(atob(normalizeBase64(body)));
+    }
+    if (transferEncoding === "quoted-printable") {
+        return decodeQuotedPrintableToBytes(body);
+    }
+
+    return binaryStringToBytes(body);
+}
+
+function decodeTransferEncodingToString(
+    body: string,
+    transferEncoding: string,
+    charset: string = "utf-8",
+): string {
+    const bytes = decodeTransferEncodingToBytes(body, transferEncoding);
+    try {
+        return new TextDecoder(charset).decode(bytes);
+    } catch (_error) {
+        return new TextDecoder("utf-8").decode(bytes);
+    }
+}
+
+function getHeaderParam(headerValue: string | undefined, paramName: string): string {
+    if (!headerValue) return "";
+    const pattern = new RegExp(`${paramName}\\s*=\\s*(?:"([^"]+)"|([^;]+))`, "i");
+    const match = headerValue.match(pattern);
+    if (!match) return "";
+    return (match[1] || match[2] || "").trim();
+}
+
+function foldBase64(base64: string, lineLength = 76): string {
+    const canonicalBase64 = normalizeBase64(base64);
+    const chunks: string[] = [];
+    for (let i = 0; i < canonicalBase64.length; i += lineLength) {
+        chunks.push(canonicalBase64.slice(i, i + lineLength));
+    }
+    return chunks.join("\r\n");
 }
 
 function parseBody(body: string, contentType: string, boundary: string, headers: Record<string, string>): ParsedBody {
     const result: ParsedBody = {};
-    
+
     if (!boundary) {
-        // Simple text or html email
-        const transferEncoding = headers['content-transfer-encoding']?.toLowerCase() || '';
-        const decodedBody = transferEncoding === 'quoted-printable' ? decodeQuotedPrintable(body) : body;
-        result.text = contentType === 'text/plain' ? decodedBody : undefined;
-        result.html = contentType === 'text/html' ? decodedBody : undefined;
+        const transferEncoding = headers["content-transfer-encoding"]?.toLowerCase() || "";
+        const charset = getHeaderParam(headers["content-type"], "charset") || "utf-8";
+        const decodedBody = decodeTransferEncodingToString(body, transferEncoding, charset);
+        result.text = contentType === "text/plain" ? decodedBody : undefined;
+        result.html = contentType === "text/html" ? decodedBody : undefined;
         return result;
     }
 
-    // Handle multipart emails
     const parts = splitMimeParts(body, boundary);
     let attachmentIndex = 0;
 
     for (const part of parts) {
         const partHeaders = parseHeaders(part.headers);
-        if (!partHeaders['content-type']) {
+        if (!partHeaders["content-type"]) {
             continue;
         }
-        const partContentType = partHeaders['content-type']?.split(';')[0].toLowerCase();
-        const contentDisposition = partHeaders['content-disposition']?.toLowerCase() || '';
-        const contentId = partHeaders['content-id']?.replace(/[<>]/g, '') || '';
-        const transferEncoding = partHeaders['content-transfer-encoding']?.toLowerCase() || '';
-        const isAttachment = contentDisposition.includes('attachment');
-        const isInline = contentDisposition.includes('inline');
 
-        // Decode the body based on transfer encoding
-        const decodedBody = transferEncoding === 'quoted-printable' ? decodeQuotedPrintable(part.body) : part.body;
+        const partContentType = partHeaders["content-type"]?.split(";")[0].toLowerCase().trim() || "";
+        const partCharset = getHeaderParam(partHeaders["content-type"], "charset") || "utf-8";
+        const rawContentDisposition = partHeaders["content-disposition"] || "";
+        const normalizedContentDisposition = rawContentDisposition.toLowerCase();
+        const transferEncoding = partHeaders["content-transfer-encoding"]?.toLowerCase() || "";
+        const isAttachment = normalizedContentDisposition.includes("attachment");
+        const isInline = normalizedContentDisposition.includes("inline");
 
-        if (partContentType === 'text/plain' && !isAttachment) {
+        if (partContentType === "text/plain" && !isAttachment && !isInline) {
+            const decodedBody = decodeTransferEncodingToString(part.body, transferEncoding, partCharset);
             result.text = decodedBody;
-        } else if (partContentType === 'text/html' && !isAttachment) {
+        } else if (partContentType === "text/html" && !isAttachment && !isInline) {
+            const decodedBody = decodeTransferEncodingToString(part.body, transferEncoding, partCharset);
             result.html = decodedBody;
         } else if (isAttachment || isInline) {
-            // Handle attachments
             if (!result.attachments) {
-                result.attachments = {};
+                result.attachments = [];
             }
 
-            let filename = '';
-            const filenameMatch = contentDisposition.match(/filename=([^;]+)/i);
-            if (filenameMatch) {
-                filename = filenameMatch[1].replace(/"/g, '');
-            }
+            const contentId = (partHeaders["content-id"] || "").replace(/[<>]/g, "").trim();
+            const filename = getHeaderParam(rawContentDisposition, "filename")
+                || getHeaderParam(partHeaders["content-type"], "name");
+            const fallbackName = contentId || `attachment${++attachmentIndex}`;
+            const name = filename || fallbackName;
+            const bytes = decodeTransferEncodingToBytes(part.body, transferEncoding);
+            const contentBase64 = bytesToBase64(bytes);
 
-            if (contentType === 'multipart/related' && contentId) {
-                result.attachments[contentId] = decodedBody;
-            } else {
-                const key = filename || `attachment${++attachmentIndex}`;
-                result.attachments[key] = decodedBody;
-            }
+            result.attachments.push({
+                name,
+                contentBase64,
+                disposition: isInline ? "inline" : "attachment",
+                contentType: partContentType || "application/octet-stream",
+                contentId: contentId || undefined,
+            });
         }
     }
 
@@ -265,7 +347,7 @@ function splitMimeParts(body: string, boundary: string): MimePart[] {
 
 function parseHeaders(headerString: string): Record<string, string> {
     const headers: Record<string, string> = {};
-    const lines = headerString.split('\r\n');
+    const lines = headerString.split(/\r\n|\n/);
     let currentHeader = '';
     let currentValue = '';
 
@@ -307,7 +389,7 @@ export function objectEmailToRaw(email: Email): string {
     
     // Add MIME headers
     const boundary = generateBoundary();
-    const hasAttachments = email.attachments && Object.keys(email.attachments).length > 0;
+    const hasAttachments = !!email.attachments && email.attachments.length > 0;
     const hasHtml = email.body && email.contentType === 'text/html';
     const hasText = email.textBody && email.contentType === 'text/plain';
     
@@ -338,15 +420,21 @@ export function objectEmailToRaw(email: Email): string {
             lines.push(`--${boundary}`);
         }
         
-        // Add attachments if any
         if (hasAttachments) {
-            for (const [filename, content] of Object.entries(email.attachments || {})) {
-                lines.push('Content-Type: application/octet-stream');
-                lines.push(`Content-Disposition: attachment; filename="${filename}"`);
-                lines.push('Content-Transfer-Encoding: base64');
-                lines.push('');
-                lines.push(content);
-                lines.push('');
+            for (const attachment of email.attachments || []) {
+                const filename = attachment.name || "attachment";
+                const contentType = attachment.contentType || "application/octet-stream";
+                const disposition = attachment.disposition || "attachment";
+
+                lines.push(`Content-Type: ${contentType}`);
+                lines.push(`Content-Disposition: ${disposition}; filename="${filename}"`);
+                if (attachment.contentId) {
+                    lines.push(`Content-ID: <${attachment.contentId}>`);
+                }
+                lines.push("Content-Transfer-Encoding: base64");
+                lines.push("");
+                lines.push(foldBase64(attachment.contentBase64));
+                lines.push("");
                 lines.push(`--${boundary}`);
             }
         }

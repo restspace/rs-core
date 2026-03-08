@@ -12,8 +12,16 @@ export interface Email {
     contentType: string;
     charset: string;
     textBody?: string;
-    attachments?: Record<string, string>;
+    attachments?: EmailAttachment[];
     references?: string;
+}
+
+export interface EmailAttachment {
+    name: string;
+    contentBase64: string;
+    disposition: "attachment" | "inline";
+    contentType?: string;
+    contentId?: string;
 }
 
 // JSON Schema for Email
@@ -31,7 +39,20 @@ export const emailSchema = {
         contentType: { type: "string" },
         charset: { type: "string" },
         textBody: { type: "string" },
-        attachments: { type: "object" },
+        attachments: {
+            type: "array",
+            items: {
+                type: "object",
+                properties: {
+                    name: { type: "string" },
+                    contentBase64: { type: "string" },
+                    disposition: { type: "string", enum: [ "attachment", "inline" ] },
+                    contentType: { type: "string" },
+                    contentId: { type: "string" },
+                },
+                required: [ "name", "contentBase64", "disposition" ],
+            },
+        },
         references: { type: "string" },
     },
     required: [ "from", "to", "subject", "date", "body", "contentType" ],
