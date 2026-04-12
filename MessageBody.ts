@@ -42,7 +42,8 @@ export class MessageBody {
     }
 
     private convertFormData() {
-        if (this.data instanceof ArrayBuffer && this.mimeType === 'application/x-www-form-urlencoded') {
+        const isUrlEncoded = (this.mimeType || "").trim().toLowerCase().startsWith("application/x-www-form-urlencoded");
+        if (this.data instanceof ArrayBuffer && isUrlEncoded) {
             const formData = ab2str(this.data);
             const lines = formData.split('&');
             const obj = lines.reduce((res, line) => {
