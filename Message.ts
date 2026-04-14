@@ -168,6 +168,12 @@ export type MessageMethod = "" | "GET" | "PUT" | "POST" | "DELETE" | "PATCH" | "
  */
 export type CacheType = "none";
 
+interface TraceParentParts {
+    traceId: string;
+    parentId: string;
+    traceFlags: string;
+}
+
 /**
  * An HTTP message (request or response)
  */
@@ -194,6 +200,12 @@ export class Message {
     protected _nullMessage = false;
     
     private static pullName = new RegExp(/([; ]name=["'])(.*?)(["'])/);
+    private static hex = /^[0-9a-f]{2}$/;
+    private static traceIdPattern = /^[0-9a-f]{32}$/;
+    private static parentIdPattern = /^[0-9a-f]{16}$/;
+    private static traceStateSimpleKey = /^[a-z0-9][a-z0-9_\-*/]{0,255}$/;
+    private static traceStateTenantId = /^[a-z0-9][a-z0-9_\-*/]{0,240}$/;
+    private static traceStateSystemId = /^[a-z][a-z0-9_\-*/]{0,13}$/;
 
     get headers(): Record<string, string | string[]> {
         const headersOut = {
@@ -294,6 +306,97 @@ export class Message {
         return traceparent.split('-')[1] || '';
     }
 
+    private static newTraceparent(traceFlags = '00') {
+        const traceId = crypto.randomUUID().replace(/-/g, '');
+        const spanId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+        return `00-${traceId}-${spanId}-${traceFlags}`;
+    }
+
+    private static sampledTraceFlags(traceFlags: string) {
+        return (parseInt(traceFlags, 16) & 1).toString(16).padStart(2, '0');
+    }
+
+    private static parseTraceparent(traceparent?: string | null): TraceParentParts | null {
+        if (!traceparent) return null;
+        const version = traceparent.substring(0, 2);
+        if (!Message.hex.test(version) || version === 'ff' || traceparent[2] !== '-') return null;
+
+        if (version === '00') {
+            const parts = traceparent.split('-');
+            if (parts.length !== 4) return null;
+            const [ , traceId, parentId, traceFlags ] = parts;
+            if (!Message.traceIdPattern.test(traceId) || /^0{32}$/.test(traceId)) return null;
+            if (!Message.parentIdPattern.test(parentId) || /^0{16}$/.test(parentId)) return null;
+            if (!Message.hex.test(traceFlags)) return null;
+            return { traceId, parentId, traceFlags: Message.sampledTraceFlags(traceFlags) };
+        }
+
+        if (traceparent.length < 55) return null;
+        const traceId = traceparent.substring(3, 35);
+        const parentId = traceparent.substring(36, 52);
+        const traceFlags = traceparent.substring(53, 55);
+        if (traceparent[35] !== '-' || traceparent[52] !== '-') return null;
+        if (traceparent.length > 55 && traceparent[55] !== '-') return null;
+        if (!Message.traceIdPattern.test(traceId) || /^0{32}$/.test(traceId)) return null;
+        if (!Message.parentIdPattern.test(parentId) || /^0{16}$/.test(parentId)) return null;
+        if (!Message.hex.test(traceFlags)) return null;
+        return { traceId, parentId, traceFlags: Message.sampledTraceFlags(traceFlags) };
+    }
+
+    private static validTraceStateKey(key: string) {
+        if (Message.traceStateSimpleKey.test(key)) return true;
+        const parts = key.split('@');
+        return parts.length === 2
+            && Message.traceStateTenantId.test(parts[0])
+            && Message.traceStateSystemId.test(parts[1]);
+    }
+
+    private static validTraceStateValue(value: string) {
+        if (!value) return false;
+        for (let i = 0; i < value.length; i++) {
+            const charCode = value.charCodeAt(i);
+            if (charCode < 0x20 || charCode > 0x7e || charCode === 0x2c || charCode === 0x3d) return false;
+        }
+        return value.charCodeAt(value.length - 1) !== 0x20;
+    }
+
+    private static sanitizeTracestate(tracestate?: string | null) {
+        if (!tracestate) return undefined;
+        const entries: string[] = [];
+        const seen = new Set<string>();
+        for (const rawEntry of tracestate.split(',')) {
+            const entry = rawEntry.trim();
+            if (!entry) continue;
+            const equalsIndex = entry.indexOf('=');
+            if (equalsIndex < 0) continue;
+            const key = entry.substring(0, equalsIndex);
+            const value = entry.substring(equalsIndex + 1);
+            if (!Message.validTraceStateKey(key) || !Message.validTraceStateValue(value)) continue;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            entries.push(entry);
+            if (entries.length === 32) break;
+        }
+        return entries.length ? entries.join(',') : undefined;
+    }
+
+    private static setTraceContext(msg: Message, traceparent?: string | null, tracestate?: string | null) {
+        const trace = Message.parseTraceparent(traceparent);
+        if (!trace) {
+            msg.setHeader('traceparent', Message.newTraceparent());
+            msg.removeHeader('tracestate');
+            return;
+        }
+
+        msg.setHeader('traceparent', `00-${trace.traceId}-${trace.parentId}-${trace.traceFlags}`);
+        const sanitizedTracestate = Message.sanitizeTracestate(tracestate);
+        if (sanitizedTracestate) {
+            msg.setHeader('tracestate', sanitizedTracestate);
+        } else {
+            msg.removeHeader('tracestate');
+        }
+    }
+
     // private setMetadataFromHeaders(data: MessageBody) {
     //     if (this._headers['content-type'] && !data.mimeType) {
     //         data.setMimeType(this._headers['content-type'] as string);
@@ -328,9 +431,7 @@ export class Message {
         //inherit tracing from parent or set up
 
         if (!parent) {
-            const traceId = crypto.randomUUID().replace(/-/g, '');
-            const spanId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
-            this.setHeader('traceparent', `00-${traceId}-${spanId}-00`);
+            this.setHeader('traceparent', Message.newTraceparent());
         } else if (parent instanceof Message) {
             const traceparent = parent.getHeader('traceparent');
             if (traceparent) {
@@ -391,6 +492,12 @@ export class Message {
         msg.name = this.name;
         const traceparent = this.getHeader('traceparent');
         if (traceparent) msg.setHeader('traceparent', traceparent);
+        const tracestate = this.getHeader('tracestate');
+        if (tracestate) {
+            msg.setHeader('tracestate', tracestate);
+        } else {
+            msg.removeHeader('tracestate');
+        }
     }
 
     hasData(): boolean {
@@ -704,11 +811,12 @@ export class Message {
 
     startSpan(traceparent?: string, tracestate?: string) {
         if (!traceparent) traceparent = this.getHeader('traceparent');
-        if (traceparent) {
-            const traceParts = traceparent.split('-');
+        const trace = Message.parseTraceparent(traceparent);
+        if (trace) {
             const newSpanId = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
-            this.setHeader('traceparent', `${traceParts[0]}-${traceParts[1]}-${newSpanId}-00`);
-            if (tracestate) this.setHeader('tracestate', tracestate);
+            this.setHeader('traceparent', `00-${trace.traceId}-${newSpanId}-${trace.traceFlags}`);
+            const sanitizedTracestate = Message.sanitizeTracestate(tracestate);
+            if (sanitizedTracestate) this.setHeader('tracestate', sanitizedTracestate);
         }
         return this;
     }
@@ -824,12 +932,7 @@ export class Message {
     static fromRequest(req: Request, tenant: string) {
         const url = new Url(req.url);
         const msg = new Message(url, tenant, req.method as MessageMethod, null, req.headers, MessageBody.fromRequest(req) || undefined);
-        const traceparent = req.headers.get('traceparent');
-        if (traceparent) {
-            msg.setHeader('traceparent', traceparent);
-            const tracestate = req.headers.get('tracestate');
-            if (tracestate) msg.setHeader('tracestate', tracestate);
-        }
+        Message.setTraceContext(msg, req.headers.get('traceparent'), req.headers.get('tracestate'));
         return msg;
     }
  
@@ -839,12 +942,7 @@ export class Message {
                 ? new MessageBody(resp.body, resp.headers.get('content-type') || 'text/plain')
                 : undefined);
         msg.setStatus(resp.status);
-        const traceparent = resp.headers.get('traceparent');
-        if (traceparent) {
-            msg.setHeader('traceparent', traceparent);
-            const tracestate = resp.headers.get('tracestate');
-            if (tracestate) msg.setHeader('tracestate', tracestate);
-        }
+        Message.setTraceContext(msg, resp.headers.get('traceparent'), resp.headers.get('tracestate'));
         return msg;
     }
 

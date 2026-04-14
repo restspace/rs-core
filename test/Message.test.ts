@@ -1,5 +1,5 @@
 import { Message } from "../Message.ts";
-import { assertEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assertEquals, assertMatch, assertNotEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
 import { Url } from "../Url.ts";
 
 Deno.test('GET encode/decode to array', async function () {
@@ -84,4 +84,66 @@ Deno.test('fromSpec method, data and local url', async function () {
     const msg = Message.fromSpec("PUT x/y y", "test", new Url("/xxx"), { x: 2 }, "POST") as Message;
     assertEquals(msg.method, "PUT");
     assertEquals(msg.url.toString(), "x/y y");
+});
+
+Deno.test('fromRequest preserves valid W3C trace context and sanitizes tracestate', function () {
+    const traceparent = '00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01';
+    const msg = Message.fromRequest(new Request('https://example.com/', {
+        headers: {
+            traceparent,
+            tracestate: 'vendor=value,Invalid=bad,dup=first,dup=second,tenant@sys=ok'
+        }
+    }), 'test');
+
+    assertEquals(msg.getHeader('traceparent'), traceparent);
+    assertEquals(msg.getHeader('tracestate'), 'vendor=value,dup=first,tenant@sys=ok');
+    assertEquals(msg.traceId, 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+});
+
+Deno.test('fromRequest restarts trace context and drops tracestate when traceparent is invalid', function () {
+    const msg = Message.fromRequest(new Request('https://example.com/', {
+        headers: {
+            traceparent: '00-00000000000000000000000000000000-bbbbbbbbbbbbbbbb-01',
+            tracestate: 'vendor=value'
+        }
+    }), 'test');
+
+    assertMatch(msg.getHeader('traceparent') || '', /^00-[0-9a-f]{32}-[0-9a-f]{16}-00$/);
+    assertNotEquals(msg.traceId, '00000000000000000000000000000000');
+    assertEquals(msg.getHeader('tracestate'), undefined);
+});
+
+Deno.test('fromRequest restarts trace context when traceparent uses uppercase id characters', function () {
+    const msg = Message.fromRequest(new Request('https://example.com/', {
+        headers: {
+            traceparent: '00-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA-bbbbbbbbbbbbbbbb-01'
+        }
+    }), 'test');
+
+    assertMatch(msg.getHeader('traceparent') || '', /^00-[0-9a-f]{32}-[0-9a-f]{16}-00$/);
+    assertNotEquals(msg.traceId, 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+});
+
+Deno.test('fromRequest drops tracestate when traceparent is absent', function () {
+    const msg = Message.fromRequest(new Request('https://example.com/', {
+        headers: {
+            tracestate: 'vendor=value'
+        }
+    }), 'test');
+
+    assertMatch(msg.getHeader('traceparent') || '', /^00-[0-9a-f]{32}-[0-9a-f]{16}-00$/);
+    assertEquals(msg.getHeader('tracestate'), undefined);
+});
+
+Deno.test('startSpan preserves sampled flag while replacing span id', function () {
+    const msg = new Message('/', 'test', 'GET', null);
+    msg.setHeader('traceparent', '00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01');
+
+    msg.startSpan();
+
+    const parts = msg.getHeader('traceparent')!.split('-');
+    assertEquals(parts[0], '00');
+    assertEquals(parts[1], 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa');
+    assertNotEquals(parts[2], 'bbbbbbbbbbbbbbbb');
+    assertEquals(parts[3], '01');
 });
