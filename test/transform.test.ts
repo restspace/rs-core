@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assert, assertEquals, assertThrows } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { transformation } from '../transformation/transformation.ts';
 import { VariableScope } from '../VariableScope.ts'; // Replace 'path/to/VariableScope' with the actual path to the VariableScope module
 import { Url } from "../Url.ts";

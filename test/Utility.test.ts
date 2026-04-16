@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertStrictEquals, assertThrows } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assert, assertEquals, assertStrictEquals, assertThrows } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { getProp, setProp, deleteProp, patch, canonicaliseName } from '../utility/utility.ts';
 import { stripHtmlTags } from '../utility/html.ts';
 

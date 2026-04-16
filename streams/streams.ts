@@ -1,6 +1,6 @@
-import { writeAll } from "https://deno.land/std@0.185.0/streams/mod.ts";
-import { ensureDir } from "https://deno.land/std@0.185.0/fs/ensure_dir.ts";
-import { dirname } from "https://deno.land/std@0.185.0/path/mod.ts";
+import { writeAll } from "https://deno.land/std@0.224.0/io/mod.ts";
+import { ensureDir } from "https://deno.land/std@0.224.0/fs/ensure_dir.ts";
+import { dirname } from "https://deno.land/std@0.224.0/path/mod.ts";
 import type { Reader } from "jsr:@std/io/types";
 
 const BUF_SIZE = 64 * 1024;

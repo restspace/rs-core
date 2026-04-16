@@ -18,6 +18,13 @@ export interface IServiceConfig {
     prePipeline?: PipelineSpec;
     postPipeline?: PipelineSpec;
     manifestConfig?: IConfigFromManifest;
+    userUrlPattern?: string;
+    datasetName?: string;
+    schema?: Record<string, unknown>;
+    store?: {
+        infraName?: string;
+        adapterConfig?: Record<string, unknown>;
+    };
 }
 
 export interface ITriggerServiceConfig extends IServiceConfig {

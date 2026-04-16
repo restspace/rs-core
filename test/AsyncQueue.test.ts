@@ -1,4 +1,4 @@
-import { assert, assertStrictEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assert, assertStrictEquals } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 
 import { AsyncQueue } from '../utility/asyncQueue.ts';
 

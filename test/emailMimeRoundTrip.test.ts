@@ -1,4 +1,4 @@
-import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assertEquals, assertStringIncludes } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { emailRawToObject, objectEmailToRaw } from "../email/emailRawToObject.ts";
 
 Deno.test("email parser normalizes quoted-printable attachment to base64", () => {

@@ -1,11 +1,11 @@
-import { assertEquals, assert } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assertEquals, assert } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { MessageBody } from '../MessageBody.ts';
 import { IFileAdapter } from '../adapter/IFileAdapter.ts';
 
 const testFileSpace = (adapter: IFileAdapter) => {
     const encoder = new TextEncoder();
     Deno.test('saves file', async () => {
-        await adapter.write('abc-def_ghi/jkl mno.html', new MessageBody(encoder.encode('<span>This is a file</span>'), 'text/html'));
+        await adapter.write('abc-def_ghi/jkl mno.html', new MessageBody(encoder.encode('<span>This is a file</span>').buffer as ArrayBuffer, 'text/html'));
     });
     Deno.test('reads file', async () => {
         const res = await adapter.read('abc-def_ghi/jkl mno.html');
@@ -33,11 +33,11 @@ const testFileSpace = (adapter: IFileAdapter) => {
         assertEquals(res.statusCode, 404);
     });
     Deno.test('writes two to directory', async () => {
-        await adapter.write('dir/item1.txt', new MessageBody(encoder.encode('An item'), 'text/plain'));
-        await adapter.write('dir/item2.json', new MessageBody(encoder.encode('{ "abc": 2 }'), 'application/json'));
+        await adapter.write('dir/item1.txt', new MessageBody(encoder.encode('An item').buffer as ArrayBuffer, 'text/plain'));
+        await adapter.write('dir/item2.json', new MessageBody(encoder.encode('{ "abc": 2 }').buffer as ArrayBuffer, 'application/json'));
     });
     Deno.test('writes subdirectory item', async () => {
-        await adapter.write('dir/subdir/item3.txt', new MessageBody(encoder.encode('Another item'), 'text/plain'));
+        await adapter.write('dir/subdir/item3.txt', new MessageBody(encoder.encode('Another item').buffer as ArrayBuffer, 'text/plain'));
     });
     Deno.test('reads directory', async () => {
         const res = await adapter.readDirectory('dir/');

@@ -4,10 +4,10 @@ import { IAccessControl, ITriggerServiceConfig, PrePost } from "./IServiceConfig
 import { Message } from "./Message.ts";
 import { PipelineSpec } from "./PipelineSpec.ts";
 import { Url } from "./Url.ts";
-import * as log from "https://deno.land/std@0.185.0/log/mod.ts";
+import * as log from "https://deno.land/std@0.224.0/log/mod.ts";
 import { Source } from "./Source.ts";
-import { GenericFunction } from "https://deno.land/std@0.185.0/log/logger.ts";
-import { BaseHandler } from "https://deno.land/std@0.185.0/log/handlers.ts";
+import { GenericFunction } from "https://deno.land/std@0.224.0/log/logger.ts";
+import { BaseHandler } from "https://deno.land/std@0.224.0/log/mod.ts";
 import { MessageBody } from "./MessageBody.ts";
 import { IDataAdapter } from "./adapter/IDataAdapter.ts";
 import dayjs from "npm:dayjs"
@@ -20,7 +20,7 @@ export type StateFunction = <T extends BaseStateClass>(cons: StateClass<T>, cont
 export interface WrappedLogger {
     critical: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
     error: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
-    warning: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
+    warn: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
     info: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
     debug: <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) => T;
     handlers: BaseHandler[];
@@ -83,8 +83,8 @@ export function createWrappedLogger(context: BaseContext): WrappedLogger {
         context.baseLogger.critical(msg, ...contextLoggerArgs(context), ...args);
     const error = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
         context.baseLogger.error(msg, ...contextLoggerArgs(context), ...args);
-    const warning = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
-        context.baseLogger.warning(msg, ...contextLoggerArgs(context), ...args);
+    const warn = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
+        context.baseLogger.warn(msg, ...contextLoggerArgs(context), ...args);
     const info = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
         context.baseLogger.info(msg, ...contextLoggerArgs(context), ...args);
     const debug = <T>(msg: T extends GenericFunction ? never : T, ...args: unknown[]) =>
@@ -92,7 +92,7 @@ export function createWrappedLogger(context: BaseContext): WrappedLogger {
     return {
         critical,
         error,
-        warning,
+        warn,
         info,
         debug,
         handlers: context.baseLogger.handlers
@@ -117,7 +117,7 @@ export class BaseStateClass {
 
     protected async getStore(key: string) {
         if (!this.stateAdapter) {
-            this.context.logger.warning('No state adapter found for %s while reading state', this.constructor.name);
+            this.context.logger.warn('No state adapter found for %s while reading state', this.constructor.name);
             return 500;
         }
         return await this.stateAdapter?.readKey(`_state_${this.context.tenant}`, this.storeKey(key));
@@ -125,7 +125,7 @@ export class BaseStateClass {
 
     protected async setStore(key: string, value: any) {
         if (!this.stateAdapter) {
-            this.context.logger.warning('No state adapter found for %s while writing state', this.constructor.name);
+            this.context.logger.warn('No state adapter found for %s while writing state', this.constructor.name);
             return 500;
         }
         const storeVal = MessageBody.fromObject(value);
@@ -134,7 +134,7 @@ export class BaseStateClass {
 
     protected async deleteStore(key: string) {
         if (!this.stateAdapter) {
-            this.context.logger.warning('No state adapter found for %s while deleting state', this.constructor.name);
+            this.context.logger.warn('No state adapter found for %s while deleting state', this.constructor.name);
             return 500;
         }
         return await this.stateAdapter?.deleteKey(`_state_${this.context.tenant}`, this.storeKey(key));

@@ -152,7 +152,7 @@ export async function asyncSkipBytes(reader: ReadableStreamDefaultReader<Uint8Ar
     const decoder = new TextDecoder();
     const encoder = new TextEncoder();
     const remainingBuffer = currentBuffer.slice(offset);
-    let bytes = encoder.encode(remainingBuffer);
+    let bytes: Uint8Array<ArrayBufferLike> = encoder.encode(remainingBuffer);
     let lastStrLen = remainingBuffer.length;
 
     while (true) {

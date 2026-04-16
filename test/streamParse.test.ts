@@ -1,4 +1,4 @@
-import { assertEquals, assertRejects } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assertEquals, assertRejects } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { asyncHeadParser, textReaderToAsyncGenerator, asyncSkipBytes } from "../streams/streamParse.ts";
 
 /**
@@ -172,11 +172,16 @@ Deno.test("asyncHeadParser - very long match string", async () => {
 });
 
 Deno.test("asyncHeadParser - error handling", async () => {
-  // Create a stream that throws an error
+  // Create a stream that throws an error during read
+  let readCount = 0;
   const stream = new ReadableStream({
-    start(controller) {
-      controller.enqueue(new TextEncoder().encode("first chunk"));
-      throw new Error("Test error");
+    pull(controller) {
+      readCount++;
+      if (readCount === 1) {
+        controller.enqueue(new TextEncoder().encode("first chunk"));
+      } else {
+        controller.error(new Error("Test error"));
+      }
     }
   });
   
@@ -288,11 +293,11 @@ Deno.test("asyncSkipBytes - skip bytes with multi-byte Unicode characters", asyn
 });
 
 Deno.test("asyncSkipBytes - error handling", async () => {
-  // Create a stream that throws an error
+  // Create a stream that throws an error during read
   const stream = new ReadableStream({
-    start(controller) {
+    pull(controller) {
       controller.enqueue(new TextEncoder().encode("first chunk"));
-      throw new Error("Test error");
+      controller.error(new Error("Test error"));
     }
   });
   

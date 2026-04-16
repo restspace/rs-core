@@ -1,6 +1,7 @@
 {
     "scripts": {
-        "test": "deno test --unstable --allow-all test/"
+        "test": "deno test --unstable --allow-all test/",
+        "test-nocheck": "deno test --unstable --allow-all --no-check test/"
     },
     "dependencies": {
         "dayjs": "^1.11.13"

@@ -1,4 +1,4 @@
-import { assert, assertEquals, assertStrictEquals } from "https://deno.land/std@0.185.0/testing/asserts.ts";
+import { assert, assertEquals, assertStrictEquals } from "https://deno.land/std@0.224.0/testing/asserts.ts";
 import { Url } from '../Url.ts';
 
 Deno.test('sets service path correctly', function () {
