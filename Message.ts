@@ -644,7 +644,7 @@ export class Message {
     }
 
     async getParam(name: string, urlPosition = -1): Promise<any> {
-        if (urlPosition > 0 && this.url.servicePathElements.length > urlPosition) {
+        if (urlPosition >= 0 && this.url.servicePathElements.length > urlPosition) {
             return this.url.servicePathElements[urlPosition];
         } else if (this.url.query[name]) {
             return this.url.query[name] || undefined;
