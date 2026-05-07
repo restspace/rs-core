@@ -37,7 +37,7 @@ const arrayToFunction = (arr: any[], transformHelper: Record<string, unknown>) =
 }
 
 const buildContext = (context: any): [ any, Record<string, unknown>] => {
-    if (Array.isArray(context) || !(typeof context === 'object')) {
+    if (Array.isArray(context) || !(typeof context === 'object') || context === null) {
         return [ { $: context }, {} ];
     }
     const newContext = { ...context };
