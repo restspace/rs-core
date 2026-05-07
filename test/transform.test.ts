@@ -488,6 +488,21 @@ Deno.test('transform expression function', function () {
     assertEquals(output, [ 2, 4, 6 ]);
 });
 
+Deno.test('expressionFilter function filters nulls using item placeholder', function () {
+    const input = {
+        a: [ 1, null, 2, null, 3 ]
+    };
+    const transform = {
+        "$this": [
+            "expressionFilter()",
+            "a",
+            "$ !== null"
+        ]
+    };
+    const output = transformation(transform, input);
+    assertEquals(output, [ 1, 2, 3 ]);
+});
+
 Deno.test('groupBy function', function () {
     const input = [
         { a: 1, b: 2 },
