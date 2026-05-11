@@ -7,6 +7,7 @@ export type PrePost = "pre" | "post";
 
 export interface IServiceConfig {
     name: string;
+    description?: string;
     source: string;
     basePath: string;
     access: IAccessControl;
@@ -62,6 +63,7 @@ export interface IConfigFromManifest {
 
 export interface IServiceConfigTemplate {
     name: string;
+    description?: string;
     source: string;
     basePath: unknown;
     access: IAccessControl;
@@ -93,6 +95,7 @@ export const schemaIServiceConfig = {
     "type": "object",
     "properties": {
         "name": { "type": "string" },
+        "description": { "type": "string", "description": "Human-readable description of this configured service" },
         "source": { "type": "string", "description": "Url from which to request source code" },
         "basePath": { "type": "string", "description": "Base path prefixing all paths used by the service" },
         "access": { "type": "object",
@@ -131,4 +134,4 @@ export const schemaIChordServiceConfig = {
     "required": [ "name", "source", "basePath" ]
 };
 
-export const schemaIServiceConfigExposedProperties = [ "name", "source", "basePath", "access", "caching", "adapterSource", "prePipeline", "postPipeline" ]; 
+export const schemaIServiceConfigExposedProperties = [ "name", "description", "source", "basePath", "access", "caching", "adapterSource", "prePipeline", "postPipeline" ]; 
