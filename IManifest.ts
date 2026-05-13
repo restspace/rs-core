@@ -26,4 +26,5 @@ export interface IServiceManifest extends IManifest {
 
 export interface IAdapterManifest extends IManifest {
     adapterInterfaces: string[];
+    infraOnlyConfigProperties?: string[];
 }
