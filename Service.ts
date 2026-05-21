@@ -1,5 +1,5 @@
 import { IAdapter } from "./adapter/IAdapter.ts";
-import { IServiceConfig } from "./IServiceConfig.ts";
+import { IServiceConfig, RetryPolicy } from "./IServiceConfig.ts";
 import { Message } from "./Message.ts";
 import { longestMatchingPath, PathMap } from "./PathMap.ts";
 import { Url } from "./Url.ts";
@@ -81,6 +81,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
         context.tracestate = msg?.getHeader('tracestate') || undefined;
         context.user = msg?.user?.email || undefined;
         context.serviceName = config.name;
+        context.retry = config.retry;
         context.logger = createWrappedLogger(context);
         // also enhance context of adapter
         if (context.adapter) {
@@ -91,6 +92,7 @@ export class Service<TAdapter extends IAdapter = IAdapter, TConfig extends IServ
                     tracestate: context.tracestate,
                     user: context.user,
                     serviceName: context.serviceName,
+                    retry: context.retry,
                     logger: context.logger
                 }
             );
@@ -304,4 +306,4 @@ export class AuthService<TAdapter extends IAdapter = IAdapter, TConfig extends I
     setUserFunc: ServiceFunction<TAdapter, TConfig> = (msg: Message) => Promise.resolve(msg);
 }
 
-export type MessageFunction = (msg: Message) => Promise<Message>;
+export type MessageFunction = (msg: Message, retry?: RetryPolicy | null) => Promise<Message>;

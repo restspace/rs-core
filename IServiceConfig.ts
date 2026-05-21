@@ -5,6 +5,19 @@ type PartialBy<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>
 
 export type PrePost = "pre" | "post";
 
+export interface RetryPolicy {
+    enabled?: boolean;
+    maxAttempts?: number;
+    baseDelayMs?: number;
+    maxDelayMs?: number;
+    backoffMultiplier?: number;
+    jitter?: "none" | "full";
+    retryMethods?: string[];
+    retryStatuses?: number[];
+    retryOnNetworkError?: boolean;
+    respectRetryAfter?: boolean;
+}
+
 export interface IServiceConfig {
     name: string;
     description?: string;
@@ -18,6 +31,7 @@ export interface IServiceConfig {
     proxyAdapterConfig?: Record<string, unknown>;
     prePipeline?: PipelineSpec;
     postPipeline?: PipelineSpec;
+    retry?: RetryPolicy;
     manifestConfig?: IConfigFromManifest;
     userUrlPattern?: string;
     datasetName?: string;
@@ -74,7 +88,32 @@ export interface IServiceConfigTemplate {
     proxyAdapterConfig?: Record<string, unknown>;
     prePipeline?: PipelineSpec;
     postPipeline?: PipelineSpec;
+    retry?: RetryPolicy;
 }
+
+export const schemaRetryPolicy = {
+    "type": "object",
+    "properties": {
+        "enabled": { "type": "boolean", "description": "Whether retry is enabled. Defaults to true when a retry policy is present." },
+        "maxAttempts": { "type": "number", "description": "Maximum attempts including the first try. Defaults to 1." },
+        "baseDelayMs": { "type": "number", "description": "Initial backoff delay in milliseconds. Defaults to 250." },
+        "maxDelayMs": { "type": "number", "description": "Maximum backoff delay in milliseconds. Defaults to 5000." },
+        "backoffMultiplier": { "type": "number", "description": "Exponential backoff multiplier. Defaults to 2." },
+        "jitter": { "type": "string", "enum": [ "none", "full" ], "description": "Jitter mode. Defaults to full." },
+        "retryMethods": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "HTTP methods eligible for retry. Defaults to GET, HEAD, OPTIONS."
+        },
+        "retryStatuses": {
+            "type": "array",
+            "items": { "type": "number" },
+            "description": "HTTP response statuses eligible for retry. Defaults to 408, 429, 500, 502, 503, 504."
+        },
+        "retryOnNetworkError": { "type": "boolean", "description": "Retry failed network requests. Defaults to true." },
+        "respectRetryAfter": { "type": "boolean", "description": "Use Retry-After response headers when present. Defaults to true." }
+    }
+};
 
 export const schemaIServiceConfig = {
     "$id": "http://restspace.io/services/serviceConfig",
@@ -119,7 +158,8 @@ export const schemaIServiceConfig = {
         "adapterConfig": { "type": "object", "description": "Configuration for the adapter", "properties": {} },
         "proxyAdapterConfig": { "type": "object", "description": "Configuration for the proxy adapter", "properties": {} },
         "prePipeline": { "$ref": "#/definitions/pipeline" },
-        "postPipeline": { "$ref": "#/definitions/pipeline" }
+        "postPipeline": { "$ref": "#/definitions/pipeline" },
+        "retry": schemaRetryPolicy
     },
     "required": [ "name", "source", "basePath", "access" ]
 };
@@ -134,4 +174,4 @@ export const schemaIChordServiceConfig = {
     "required": [ "name", "source", "basePath" ]
 };
 
-export const schemaIServiceConfigExposedProperties = [ "name", "description", "source", "basePath", "access", "caching", "adapterSource", "prePipeline", "postPipeline" ]; 
+export const schemaIServiceConfigExposedProperties = [ "name", "description", "source", "basePath", "access", "caching", "adapterSource", "prePipeline", "postPipeline", "retry" ]; 

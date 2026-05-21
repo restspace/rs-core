@@ -1,6 +1,6 @@
 import { IAdapter } from "./adapter/IAdapter.ts";
 import { IServiceManifest } from "./IManifest.ts";
-import { IAccessControl, ITriggerServiceConfig, PrePost } from "./IServiceConfig.ts";
+import { IAccessControl, ITriggerServiceConfig, PrePost, RetryPolicy } from "./IServiceConfig.ts";
 import { Message } from "./Message.ts";
 import { PipelineSpec } from "./PipelineSpec.ts";
 import { Url } from "./Url.ts";
@@ -34,7 +34,7 @@ export interface BaseContext {
      * Makes a request to the specified URL.
      * If source is provided, it will be used to determine the source of the request.
      */
-    makeRequest: (msg: Message, source?: Source) => Promise<Message>;
+    makeRequest: (msg: Message, source?: Source, retry?: RetryPolicy | null) => Promise<Message>;
     /**
      * Verifies that the response is a JSON object and returns the object.
      * If checkPath is provided, it will be used to check that the object has the specified property.
@@ -61,6 +61,8 @@ export interface BaseContext {
     serviceName?: string;
     /** Request-scoped access config (when available). */
     access?: IAccessControl;
+    /** Request-scoped default retry policy for outgoing external requests. */
+    retry?: RetryPolicy;
     registerAbortAction: (msg: Message, action: () => void) => void;
 }
 
