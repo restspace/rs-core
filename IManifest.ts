@@ -1,4 +1,4 @@
-import { IServiceConfig, IServiceConfigTemplate } from "./IServiceConfig.ts";
+import { IAccessControl, IServiceConfig, IServiceConfigTemplate } from "./IServiceConfig.ts";
 import { PipelineSpec } from "./PipelineSpec.ts";
 
 export interface IManifest {
@@ -15,6 +15,7 @@ export interface IManifest {
 export interface IServiceManifest extends IManifest {
     apis?: string[];
     adapterInterface?: string;
+    requiredAccess?: Partial<IAccessControl>;
     privateServices?: Record<string, IServiceConfigTemplate>;
     prePipeline?: PipelineSpec;
     postPipeline?: PipelineSpec;
